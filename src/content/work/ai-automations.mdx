@@ -1,0 +1,75 @@
+---
+title: "70+ AI automations for enterprise operations teams"
+slug: "ai-automations"
+client: "Shae Group"
+year: 2025
+role: "Automation architect & sole builder"
+duration: "6 months (ongoing)"
+oneLineOutcome: "Eliminated 40+ hours of weekly manual work across both organizations."
+tags: ["AI Automations", "n8n", "LLM", "GHL", "Zapier"]
+publishedAt: "2025-06-01"
+order: 4
+featured: false
+---
+
+## Context
+
+Shae Group is a regional business consultancy. The other clients in this engagement are large enterprise operations groups — companies with processes that have been running for years, built around people doing repetitive tasks because there was no better option.
+
+By 2025, there was a better option. I was brought in to find every process that was burning human hours on work that could be automated, and automate it properly — not with fragile scripts that break on the first edge case, but with systems that handle errors, send alerts, and degrade gracefully when something unexpected happens.
+
+The brief was open-ended in the best possible way: "Find the bottlenecks. Fix them. Tell us what you found."
+
+## Constraints
+
+**Enterprise-grade reliability.** These weren't personal productivity tools. When an automation fails at enterprise scale, it potentially affects hundreds of downstream tasks and dozens of staff members. Every workflow needed error handling, logging, and failure notifications. "It worked in testing" was not acceptable.
+
+**Work with existing tools.** Neither client was willing to migrate their data or switch their primary platforms. Automations had to connect to what they already had: HubSpot, Salesforce, custom internal databases, WhatsApp Business, Google Workspace, Microsoft 365, and a dozen smaller tools. The constraint forced creative integration work rather than greenfield building.
+
+**No black boxes.** Senior leadership at both organizations wanted to understand what was running. Every automation needed documentation a non-technical manager could read: what it does, what triggers it, what happens when it fails. This wasn't optional.
+
+**Gradual rollout.** Neither client wanted all 70+ automations turned on at once. We phased delivery in monthly batches, with 2-week observation periods before each batch went fully live. This extended the engagement but reduced risk.
+
+## What I built
+
+The work split roughly into four categories:
+
+**Lead processing and qualification (23 automations).** Inbound leads from web forms, LinkedIn, and WhatsApp were previously handled manually by SDRs who spent 2–3 hours daily on intake, scoring, and routing. I built a pipeline that captures every lead, runs it through an LLM-based qualification flow (checking for completeness, urgency signals, and fit against ICP criteria), enriches it with company data, scores it, and routes it to the right team — all within 4 minutes of the lead arriving. SDRs now start their day with a prioritized, pre-qualified queue.
+
+**Client reporting automation (12 automations).** Account managers at one of the enterprise clients were spending 6–8 hours weekly pulling data from 5 different systems, formatting it into client-ready reports, and emailing them. The automation pulls from all 5 systems on a schedule, runs the data through a formatting and summarization pipeline, generates a branded PDF report, and emails it with a personalized note. Account managers review and approve with one click before it sends. Total time per report: 8 minutes, down from 8 hours.
+
+**Internal communications triage (18 automations).** All organizations deal with high email and WhatsApp volume where urgent messages get buried. I built classification and routing systems that read incoming messages, tag them by urgency and category, surface high-priority items to the right people, and draft suggested responses for common queries. This is where the LLM work gets interesting — the models needed to understand internal context, abbreviations, client names, and project codes. I fine-tuned the prompts against 6 months of historical communications before deploying.
+
+**Data synchronization (19+ automations).** The unglamorous work. Customer records that existed in 3 systems but were always slightly out of sync. Contract data that lived in email and needed to get into the CRM. Meeting notes that should have been tagged to deals but weren't. Most of these were invisible problems that caused downstream confusion more than immediate crises. Fixing them one by one compounded into significant time savings.
+
+## Decisions & tradeoffs
+
+**n8n over Zapier for complex workflows.** For the simpler, trigger-and-action automations, Zapier was fine. For anything with conditional logic, error handling, loops, or database operations, n8n was dramatically more capable. The learning curve for the clients was higher — they couldn't self-service n8n workflows the way they could Zapier — but the reliability and capability difference was worth it for anything that ran more than 10 times per day.
+
+**Self-hosted n8n vs. cloud.** Both clients had data residency concerns. We ran n8n on their own cloud infrastructure. This added setup time but gave them full control over their data and removed a vendor dependency from their critical workflows.
+
+**LLM model selection per task.** Not every automation needed GPT-4. I used smaller, faster models for classification tasks (where the prompt was structured and the output was simple) and reserved larger models for tasks that required nuanced judgment — like interpreting ambiguous email intent or generating contextually appropriate responses. This cut per-automation costs by 60% without a measurable quality drop.
+
+**GHL for client-facing communication flows.** GoHighLevel (GHL) was already in use at Shae Group for their marketing operations. Rather than replacing it, I built on top of it — using GHL's automation triggers to kick off n8n workflows for the more complex processing, then returning results back to GHL for client-facing delivery. The seam between the two systems is invisible to end users.
+
+## Outcome
+
+<StatGroup>
+  <Stat value="70+" caption="Distinct automations in production" />
+  <Stat value="40h+" caption="Weekly hours recovered across both teams" />
+  <Stat value="4 min" caption="Average lead processing time, down from 3 hours" />
+</StatGroup>
+
+The numbers that matter most aren't the ones above. They're the ones that don't show up in a weekly report: the SDR who now starts their day knowing which leads are worth calling, instead of guessing. The account manager who used to spend Friday afternoons on reports and now uses them on client calls. The operations team that stopped finding out about process failures on Monday morning.
+
+Both engagements are ongoing. The initial 70+ automations have been joined by 20+ more identified during the observation periods. The systems are running 24/7, processing thousands of events daily, with a reliability rate above 99.2%.
+
+## What I'd do differently
+
+The documentation requirement — which I initially thought was overhead — turned out to be one of the most valuable parts of the engagement. When a new team member joined one client's ops team 3 months in, they were onboarded to the automation stack in a day because every workflow had a plain-language description. I'd build that in from day one on every similar project.
+
+I also underestimated the change management side of automation work. Several teams had workflows that were *technically* ready to automate but where the people running them weren't ready to hand them over. In one case, an automation sat finished for 3 weeks before the team was comfortable turning it on. The technical work was done. The human work wasn't. That's worth budgeting for.
+
+## Built with
+
+Sole automation architect and builder. n8n (self-hosted), Zapier, GHL, Claude (Anthropic), OpenAI, HubSpot API, Salesforce API, Google Workspace APIs, Microsoft Graph API, WhatsApp Business API.

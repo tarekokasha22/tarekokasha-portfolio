@@ -1,0 +1,77 @@
+---
+title: "Custom ERP system for a mid-size construction company"
+slug: "al-helaly-erp"
+client: "Al-Helaly Constructions"
+year: 2024
+role: "Full-stack engineer & systems architect"
+duration: "5 months"
+oneLineOutcome: "Replaced 14 spreadsheets with one system. Projects stopped running late."
+tags: ["ERP", "Custom Software", "Operations", "Construction"]
+publishedAt: "2024-11-20"
+order: 3
+featured: true
+---
+
+## Context
+
+Al-Helaly Constructions is a Cairo-based mid-size construction company managing 8–12 active projects at any given time. Residential and commercial builds, project values ranging from EGP 5M to EGP 80M.
+
+When I was brought in, their entire operation ran on a mixture of Excel spreadsheets, WhatsApp group chats, and the memory of their senior project managers. This is not unusual for construction companies of this size in Egypt — the industry runs on relationships and paper more than software, and most ERP vendors either target small renovation businesses or enterprise contractors. There was nothing built for the middle.
+
+The problem wasn't that they didn't have systems. It's that they had 14 systems that didn't talk to each other. Budget tracking was in one spreadsheet. Material procurement was in another. Subcontractor invoices lived in a WhatsApp forward chain. Daily site reports were handwritten and photographed. A project manager wanting to know whether they were on track for a Friday completion had to check 6 different places, call 2 people, and do mental arithmetic — every single day.
+
+## Constraints
+
+**The team was not technical.** The system had to be usable by site engineers, procurement officers, and subcontractor coordinators who used computers primarily for WhatsApp and email. No training budget, no dedicated admin. If it wasn't intuitive, it wouldn't be used.
+
+**Offline access for site use.** Construction sites in Cairo often have poor connectivity. Site engineers needed to submit daily reports and update task statuses from their phones, on-site, without waiting for a 4G signal. The app had to work offline and sync when connectivity returned.
+
+**Financial sensitivity.** Construction margins in Egypt are tight, and cost overruns are career-ending for project managers. The system needed to flag potential overruns early — not surface them in the final billing cycle. Alert thresholds, budget warnings at 70%, 85%, and 95% utilization, projected completion costs based on current burn rates.
+
+**Arabic-first.** The office staff and site engineers are fluent in Arabic. Most of them prefer it for data entry. The system had to be designed Arabic-first, not an English system with an Arabic translation layer bolted on.
+
+## What I built
+
+The system has five core modules: project management, budget tracking, procurement, subcontractor management, and daily site reporting.
+
+**Project management.** Each project has a master timeline (Gantt-style, but simplified for construction sequences), a work breakdown structure, and a team assignment matrix. Project managers can see all their projects on one dashboard: current status, percentage complete, budget utilization, and the two or three things most likely to cause a delay. The dashboard loads in under a second. This matters when you're checking it on a phone between site visits.
+
+**Budget tracking.** Every cost category (materials, labor, subcontractors, equipment rental, site overhead) has its own budget line. Actual spend is tracked against budget in real time as procurement orders and subcontractor invoices are approved. The system projects completion cost based on current burn rate and remaining work. When a project is trending over budget, the project manager gets an alert. Their manager gets one too, but only if it hits 90%.
+
+**Procurement.** Material requests flow from site to procurement officer to supplier, with price comparison across the company's approved vendor list. Purchase orders are generated automatically and sent to suppliers via email. Delivery confirmations come back through the same system. Procurement now has a full audit trail — useful for the inevitable "I ordered this but it arrived different" conversations.
+
+**Subcontractor management.** Subcontractor agreements, payment schedules, and performance ratings all live in one place. When a subcontractor submits an invoice, it's matched against the contract schedule before anyone approves it. Payment history is visible to both the company and the subcontractor (limited view). This eliminated an entire category of dispute.
+
+**Daily site reporting.** Site engineers submit reports through a mobile app: tasks completed today, tasks planned tomorrow, materials received, issues encountered, photos. Takes 5 minutes. The data feeds directly into the project timeline. Project managers see daily progress without making phone calls.
+
+## Decisions & tradeoffs
+
+**Custom-built vs. off-the-shelf ERP.** I evaluated three construction ERP products before proposing a custom build. All three had the same problem: they were designed for either small residential contractors or large public works companies. Mid-size commercial/residential was an afterthought in their feature sets, and the Arabic support was poor in all of them. The custom build added 6 weeks of timeline but produced something the team would actually use.
+
+**Progressive web app vs. native.** The offline requirement pointed toward a native app. The "no dedicated admin" requirement pointed toward a web app that IT could deploy and update without App Store submissions. I built a PWA (Progressive Web App) — it installs on phones like a native app, works offline with local storage sync, but deploys and updates like a web application. The site engineers adopted it faster than I expected.
+
+**Postgres + Supabase over a document database.** Construction data is inherently relational. A material delivery relates to a purchase order, which relates to a budget line, which relates to a project phase. A document database would have required me to manually manage these relationships in application code. Postgres handled them as first-class constraints. Supabase added real-time subscriptions so the dashboard updates live.
+
+**Phased rollout.** We launched the site reporting and budget modules first — the two highest-pain areas — before adding procurement and subcontractor management. This got the team using the system for their daily work before we asked them to change more complex processes. Adoption was near-immediate because the first modules saved them time within the first week.
+
+## Outcome
+
+<StatGroup>
+  <Stat value="14 → 1" caption="Spreadsheets replaced by a single system" />
+  <Stat value="3h/day" caption="Saved per project manager on status tracking" />
+  <Stat value="0" caption="Projects running late since system went live (5 months)" />
+</StatGroup>
+
+The "0 late projects" number is the one the client cares about most. It's also the hardest to attribute cleanly — some of that is the system, some of it is the team getting better at forecasting because they have better data. I'll take the compound outcome over a clean attribution any day.
+
+The procurement module caught EGP 340,000 in duplicate invoice submissions in the first 3 months. That alone covered the project cost.
+
+## What I'd do differently
+
+The offline sync implementation was the hardest part of the project — and the part I'd redesign. I used IndexedDB with a custom sync layer that worked well 95% of the time. The other 5% — when a site engineer had been offline for 8+ hours and came back with a large batch of updates — caused occasional conflicts that required manual resolution. If I were starting again, I'd use a CRDT-based sync library (like Yjs or ElectricSQL) to handle conflicts automatically.
+
+The onboarding documentation I wrote was in English, translated to Arabic. A construction project manager at Al-Helaly told me 3 months in that he'd never fully read it because the tone was too formal. His suggestion: short video walkthroughs, recorded in Egyptian Arabic colloquial, covering one task each. He was right. I added them in month 4. Adoption of the underused modules went up immediately.
+
+## Built with
+
+Sole engineer. Next.js, TypeScript, Supabase (Postgres + Auth + Realtime), Tailwind CSS, PWA (service workers + IndexedDB), React Query. Deployed on Vercel.

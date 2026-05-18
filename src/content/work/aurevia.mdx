@@ -1,0 +1,74 @@
+---
+title: "AI photography studio for a Dubai jewelry brand"
+slug: "aurevia"
+client: "Aurevia"
+year: 2025
+role: "Sole builder — design, engineering, deployment"
+duration: "8 weeks"
+oneLineOutcome: "Collapsed a 2-week production cycle into 24 hours."
+tags: ["AI", "Computer Vision", "Internal Tools", "Automation"]
+publishedAt: "2025-03-15"
+order: 1
+featured: true
+---
+
+## Context
+
+Aurevia is a jewelry brand based in Dubai, selling handcrafted gold and gemstone pieces primarily through Instagram and a Shopify storefront. Their pieces are beautiful. Their photography pipeline was not.
+
+Every new collection required a 3-day photo shoot with a hired studio, followed by a week of retouching, followed by another week of catalog uploads and product descriptions. By the time a new collection was live, the original Instagram momentum from the "sneak peek" posts had evaporated. Customers who'd asked about pieces in comments had already bought from someone else.
+
+The team knew AI image generation existed. They'd tried the consumer tools — Midjourney, DALL-E, a few others. None of them could handle the specular highlights on polished gold. None of them understood the brand's visual signature: soft top-left light, warm tones, cream marble backgrounds, no oversaturation. The outputs looked like stock photos, not Aurevia.
+
+## Constraints
+
+**No new headcount.** The team had 4 people managing a brand that punched above its weight. Whatever I built had to run without a dedicated operator — ideally triggered from a phone, with outputs appearing in a shared folder within the hour.
+
+**Brand consistency was non-negotiable.** Aurevia's visual identity was their competitive advantage. The system had to learn their specific look — not "jewelry photography" in general, but *their* jewelry photography. Warm light from the upper left. The way gold catches the light at a 30-degree angle. The particular depth of shadow they used in product hero shots.
+
+**Bilingual catalog output.** Every product needed both English and Arabic descriptions, correctly typeset, with Western Arabic numerals for pricing. Not machine translation — properly written copy that matched their existing tone.
+
+**Speed over perfection.** The brief was clear: 80% as good as the studio, delivered in 2 hours, not 2 weeks. The team could flag images for re-generation. The goal was momentum, not museum quality.
+
+## What I built
+
+The system has three stages: reference ingestion, generation, and catalog output.
+
+**Stage 1 — Reference ingestion.** I built a one-time pipeline that processed Aurevia's existing 340-image photo library. Each image was analyzed for lighting direction, color temperature, background composition, and camera angle. This became the brand's "style profile" — a set of parameters that every generated image had to match.
+
+**Stage 2 — AI generation pipeline.** When new product photos arrived (raw photos on a plain background, taken on a phone), the system processed them through a multi-step pipeline: background removal, product isolation, lighting analysis, then generation using a fine-tuned model. The generation prompt was constructed dynamically from the brand profile, not written by hand each time.
+
+**Stage 3 — Catalog output.** Generated images were automatically paired with AI-written copy. English descriptions were generated first against a tone guide I built from 60 existing product descriptions. Arabic was translated by a separate model instructed to adapt for register, not just translate literally. Final outputs — images, copy, SKU data — landed in a Notion database the team could review and publish from directly.
+
+The operator interface was a simple WhatsApp bot. Drop in a photo, get a catalog entry back within 40 minutes. No dashboards to learn, no software to install.
+
+## Decisions & tradeoffs
+
+**Fine-tuned model vs. prompt engineering alone.** The first two weeks I spent trying to get acceptable results through prompt engineering with base models. The output was plausible but not Aurevia. Gold consistently looked too yellow or too silver. Shadows were wrong. I ended up fine-tuning a model on 200 curated examples from their library. This added 3 weeks of training time but cut the "looks off" rejection rate from 40% to under 8%.
+
+**WhatsApp vs. a custom dashboard.** My first instinct was to build a proper operator UI — upload queue, preview grid, approval workflow. The client's team tested a prototype and almost never used it. They ran everything from their phones. WhatsApp was where their workday already lived. The dashboard became a fallback. The primary interface was a bot. This was the right call — adoption was immediate.
+
+**Notion vs. a custom CMS.** The team already had Notion as their content workspace. Building a custom CMS would have added 2–3 weeks and introduced a new tool they'd have to learn and maintain. Outputting directly to Notion meant zero onboarding friction. The tradeoff: less control over the output format. It was worth it.
+
+## Outcome
+
+<StatGroup>
+  <Stat value="2 weeks → 24h" caption="Production cycle for new collection imagery" />
+  <Stat value="$4,200/mo" caption="Saved by replacing studio retainer" />
+  <Stat value="14 hours" caption="Operator time saved per week" />
+</StatGroup>
+
+The first collection processed through the system went live 26 hours after the product samples arrived. Previously, that same collection would have taken 18–22 days. The team used the time they recovered to run three additional campaigns that quarter. Revenue from those campaigns covered the cost of the project in week 6.
+
+The system has now processed 4 collections and over 400 product images. The rejection rate for AI-generated images has dropped to 6% as the model has refined against client feedback.
+
+## What I'd do differently
+
+The WhatsApp interface was the right call, but the implementation was rushed. Error handling was weak — if the pipeline failed silently, the team wouldn't know for hours. I added better failure notifications in week 6, but it should have been in the spec from the start.
+
+I also underestimated how much the Arabic copy quality would matter to the team. The first version was technically correct but felt flat to native speakers. I spent an extra week refining the generation parameters with feedback from a native Arabic copywriter the client brought in. If I were starting again, I'd budget that review cycle into the initial timeline.
+
+## Built with
+
+Sole builder — architecture, fine-tuning, pipeline engineering, deployment.
+WhatsApp Business API, custom generation pipeline, Notion API, Resend (copy review notifications).

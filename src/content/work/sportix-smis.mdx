@@ -1,0 +1,75 @@
+---
+title: "Sports Management Information System for Saudi sports clubs"
+slug: "sportix-smis"
+client: "Sportix"
+year: 2024
+role: "Full-stack engineer & architect"
+duration: "4 months"
+oneLineOutcome: "Unified operations for 8 clubs across 3 sports federations."
+tags: ["SMIS", "Sports Tech", "Custom App", "Saudi Arabia"]
+publishedAt: "2024-08-10"
+order: 4
+featured: false
+---
+
+## Context
+
+Sportix is a sports management company operating in Saudi Arabia, working with clubs across football, basketball, and swimming. The Saudi sports sector is expanding rapidly — Vision 2030 has injected significant investment into professional and semi-professional clubs, and with that investment comes a requirement for more rigorous operations management.
+
+The problem Sportix faced was familiar: eight clubs, three sports, three different federation reporting requirements, and no unified system to manage any of it. Player registrations were tracked in spreadsheets. Training schedules were managed by WhatsApp. Financial reporting for federation compliance was assembled manually every quarter — a 2-week exercise involving 4 staff members and inevitable errors.
+
+They needed a Sports Management Information System (SMIS): one platform where clubs could manage players, training, competitions, finances, and federation compliance without duplicating effort or reconciling conflicting data.
+
+## Constraints
+
+**Federation compliance was mandatory, not optional.** Each of the three sports federations (football, basketball, swimming) had specific data formats for player registrations, match reports, and financial submissions. The system had to generate compliant reports in the exact formats the federations required — not close approximations that required manual editing.
+
+**Multi-club, multi-sport architecture.** Each club needed its own data isolation — a football club couldn't see a basketball club's financials. But Sportix administrators needed a consolidated view across all clubs. The permission model had to handle both without either leaking data or fragmenting the experience.
+
+**Arabic-first, Saudi context.** Saudi sports operations run in Arabic. Hijri calendar support was required for scheduling (the Saudi football federation still uses it for official match dates). Arabic name fields needed to handle all regional naming conventions, including multi-generational family names. This is one of those requirements that sounds simple until you're in it.
+
+**Cloud-first, mobile-heavy.** Club staff in Saudi Arabia use mobile devices for most of their work. The system needed to be excellent on mobile, not just functional. Large tap targets, fast load times on mobile data, and a UI that didn't feel like a shrunk desktop dashboard.
+
+## What I built
+
+**Player management.** Complete player profiles: personal data, photo, national ID (required for federation registration), contract history, medical clearance status, injury log, and performance metrics. Registration flows generate federation-compliant XML or Excel exports (depending on the federation) in one click. Transfers between clubs within the Sportix network are handled in-system with full audit trails.
+
+**Training and schedule management.** Coaches build training plans and assign them to player groups. The calendar supports both Gregorian and Hijri dates, displayed together. WhatsApp notifications go out automatically for training sessions and schedule changes — meeting club staff where they already work rather than asking them to check a calendar app.
+
+**Competition management.** Match and tournament scheduling, lineup management, live score entry, match reports. Generated match reports are formatted per federation spec and can be submitted from the system directly.
+
+**Financial module.** Budget management, player contract financials, sponsorship tracking, and federation-mandated financial reports. The quarterly federation submissions that previously took 2 weeks to prepare now take 3 hours — the data is already in the system; it's just a matter of generating the report.
+
+**Sportix administrator view.** A consolidated dashboard across all 8 clubs: active players, training compliance rates, financial positions, upcoming competitions. The kind of visibility that makes it possible to manage 8 clubs with a team of 12 rather than a team of 40.
+
+## Decisions & tradeoffs
+
+**One codebase, multi-tenant vs. separate deployments per club.** The multi-tenant single codebase was the right choice technically — one deployment to maintain, one database to back up, shared infrastructure costs. The risk was a bug or data issue in one club potentially affecting others. I mitigated this with strict row-level security in Supabase — each club's data is isolated at the database level, not just the application level.
+
+**Arabic-first vs. bilingual.** The brief was "Arabic-first." I interpreted this to mean Arabic as the default, with English available for federation interfaces that required it. Some of the federation reporting formats had English field names (particularly for international competitions). Building the UI Arabic-first with English as a secondary mode was the right call — the staff adopted it immediately because it didn't feel like an imported tool.
+
+**Hijri calendar integration.** This was the most technically interesting constraint. Saudi Arabia uses the Hijri calendar for official government and federation purposes, but the Gregorian calendar for international competitions. I used the `intl-l10n` library for Hijri/Gregorian conversion but had to write custom parsing for the edge cases (start-of-month ambiguity in the Hijri calendar is a real problem that the standard library handles incorrectly in about 2% of cases). There was no shortcut here — it required primary source research into the Saudi calendar authority's official conversion tables.
+
+**WhatsApp vs. email for notifications.** The client's staff used WhatsApp for essentially all internal communication. Email went unread for hours. WhatsApp notifications via the Business API had 95%+ open rates within 5 minutes. The integration complexity was worth it.
+
+## Outcome
+
+<StatGroup>
+  <Stat value="8 clubs" caption="Unified onto one platform" />
+  <Stat value="3h" caption="Quarterly federation reports, down from 2 weeks" />
+  <Stat value="3 sports" caption="Football, basketball, swimming — one system" />
+</StatGroup>
+
+The Sportix team describes the biggest change as visibility. Before the system, no one at the Sportix level had a clear picture of what was happening across all 8 clubs simultaneously. Training compliance, player availability, upcoming competitions, financial positions — all of it required calling club managers individually. Now it's a morning dashboard check.
+
+The federation compliance work was the highest-value deliverable. Errors in federation filings in Saudi Arabia can result in fines and, in serious cases, club suspension. In the 6 months since deployment, there have been zero rejected filings.
+
+## What I'd do differently
+
+The performance analytics module — which I built last, under time pressure — is the weakest part of the system. It handles basic statistics (goals scored, training attendance, match results) but lacks the depth a serious coaching staff would want. I made the pragmatic call to ship what was built and iterate, which was right for the deadline. The iteration hasn't happened yet. It's on the backlog.
+
+I also wish I'd built the WhatsApp notification system earlier. It was added in week 10 as an enhancement. Every staff member who encountered it immediately asked why it hadn't been there from the start. That's the answer.
+
+## Built with
+
+Sole engineer. Next.js, TypeScript, Supabase, Tailwind CSS. WhatsApp Business API for notifications. Custom Hijri/Gregorian calendar utilities. Federation-specific export modules built per sport.
