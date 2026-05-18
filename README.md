@@ -2,7 +2,6 @@
 
 Personal portfolio for Tarek Okasha — independent engineer building AI systems, intelligent automations, and custom internal software for founders and operators.
 
-Live at **[tarekokasha.com](https://tarekokasha.com)**
 
 ---
 
