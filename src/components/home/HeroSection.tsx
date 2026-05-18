@@ -3,16 +3,12 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { siteConfig } from "@/config/site";
 import { Magnetic } from "@/components/ui/Magnetic";
 import { SpaceBackground } from "@/components/ui/SpaceBackground";
 
-gsap.registerPlugin(ScrollTrigger);
-
 export function HeroSection() {
   const containerRef = useRef<HTMLElement>(null);
-  const contentRef  = useRef<HTMLDivElement>(null);
   const line1Ref    = useRef<HTMLDivElement>(null);
   const line2Ref    = useRef<HTMLDivElement>(null);
   const subRef      = useRef<HTMLParagraphElement>(null);
@@ -42,21 +38,8 @@ export function HeroSection() {
           0.95
         );
 
-      // ── Scroll exit — fade content out as hero leaves viewport ─
-      // NOTE: We do NOT use yPercent on the lines — they sit inside
-      // overflow:hidden clip containers so upward movement clips them.
-      if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        gsap.to(contentRef.current, {
-          opacity: 0,
-          ease: "none",
-          scrollTrigger: {
-            trigger: containerRef.current,
-            start: "50% top",
-            end: "90% top",
-            scrub: true,
-          },
-        });
-      }
+      // No scroll-based transforms on the hero text — the line containers
+      // use overflow:hidden so any yPercent movement clips the text.
     }, containerRef);
 
     return () => ctx.revert();
@@ -70,7 +53,7 @@ export function HeroSection() {
       {/* Space background */}
       <SpaceBackground />
 
-      <div ref={contentRef} className="container relative z-10">
+      <div className="container relative z-10">
         <div className="max-w-5xl">
           {/* Headline — line-level clip containers prevent descender clipping */}
           <div aria-label={siteConfig.tagline}>
