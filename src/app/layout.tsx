@@ -3,9 +3,7 @@ import { Cormorant_Garamond, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import { CustomCursor } from "@/components/ui/CustomCursor";
-import { ScrollProgress } from "@/components/ui/ScrollProgress";
-import { RobotWatcher } from "@/components/ui/RobotWatcher";
+import { ClientWidgets } from "@/components/layout/ClientWidgets";
 
 const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
@@ -63,12 +61,13 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${cormorant.variable} ${spaceGrotesk.variable}`}>
       <body className="antialiased">
-        <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[9999] focus:px-4 focus:py-2 focus:bg-accent focus:text-ink focus:text-sm">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[9999] focus:px-4 focus:py-2 focus:bg-accent focus:text-ink focus:text-sm"
+        >
           Skip to content
         </a>
-        <CustomCursor />
-        <ScrollProgress />
-        <RobotWatcher />
+        <ClientWidgets />
         <Header />
         <main id="main-content">{children}</main>
         <Footer />

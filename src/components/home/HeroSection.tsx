@@ -1,65 +1,27 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import { gsap } from "gsap";
 import { siteConfig } from "@/config/site";
 import { Magnetic } from "@/components/ui/Magnetic";
-import { SpaceBackground } from "@/components/ui/SpaceBackground";
+
+// Loaded after hydration — canvas doesn't need to block the hero text
+const SpaceBackground = dynamic(
+  () => import("@/components/ui/SpaceBackground").then((m) => ({ default: m.SpaceBackground })),
+  { ssr: false }
+);
 
 export function HeroSection() {
-  const containerRef = useRef<HTMLElement>(null);
-  const line1Ref    = useRef<HTMLDivElement>(null);
-  const line2Ref    = useRef<HTMLDivElement>(null);
-  const subRef      = useRef<HTMLParagraphElement>(null);
-  const ctaRef      = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const ctx = gsap.context(() => {
-      // ── Entrance ─────────────────────────────────────────────
-      const tl = gsap.timeline({ defaults: { ease: "power4.out" } });
-
-      tl.fromTo(
-        [line1Ref.current, line2Ref.current],
-        { yPercent: 110 },
-        { yPercent: 0, duration: 1.1, stagger: 0.08 },
-        0
-      )
-        .fromTo(
-          subRef.current,
-          { opacity: 0, y: 16 },
-          { opacity: 1, y: 0, duration: 0.9 },
-          0.75
-        )
-        .fromTo(
-          ctaRef.current,
-          { opacity: 0, y: 10 },
-          { opacity: 1, y: 0, duration: 0.7 },
-          0.95
-        );
-
-      // No scroll-based transforms on the hero text — the line containers
-      // use overflow:hidden so any yPercent movement clips the text.
-    }, containerRef);
-
-    return () => ctx.revert();
-  }, []);
-
   return (
-    <section
-      ref={containerRef}
-      className="relative min-h-screen flex flex-col justify-end pb-20 md:pb-28 overflow-hidden"
-    >
-      {/* Space background */}
+    <section className="relative min-h-screen flex flex-col justify-end pb-20 md:pb-28 overflow-hidden">
       <SpaceBackground />
 
       <div className="container relative z-10">
         <div className="max-w-5xl">
-          {/* Headline — line-level clip containers prevent descender clipping */}
+          {/* Headline — clip containers reveal text upward */}
           <div aria-label={siteConfig.tagline}>
             <div style={{ overflow: "hidden", marginBottom: "0.04em" }}>
               <div
-                ref={line1Ref}
                 style={{
                   fontFamily: "var(--font-display)",
                   fontSize: "clamp(3.6rem, 10.5vw, 10rem)",
@@ -68,6 +30,7 @@ export function HeroSection() {
                   letterSpacing: "-0.04em",
                   color: "var(--color-cream)",
                   paddingBottom: "0.06em",
+                  animation: "heroLineReveal 1.1s cubic-bezier(0.16,1,0.3,1) both",
                 }}
               >
                 Software that
@@ -75,7 +38,6 @@ export function HeroSection() {
             </div>
             <div style={{ overflow: "hidden" }}>
               <div
-                ref={line2Ref}
                 style={{
                   fontFamily: "var(--font-display)",
                   fontSize: "clamp(3.6rem, 10.5vw, 10rem)",
@@ -84,6 +46,7 @@ export function HeroSection() {
                   letterSpacing: "-0.04em",
                   color: "var(--color-cream)",
                   paddingBottom: "0.06em",
+                  animation: "heroLineReveal 1.1s 0.08s cubic-bezier(0.16,1,0.3,1) both",
                 }}
               >
                 pays for{" "}
@@ -95,21 +58,25 @@ export function HeroSection() {
           </div>
 
           <p
-            ref={subRef}
             className="mt-8 max-w-xl"
             style={{
               fontFamily: "var(--font-sans)",
               fontSize: "clamp(1rem, 1.8vw, 1.175rem)",
               color: "var(--color-muted)",
               lineHeight: 1.65,
-              opacity: 0,
+              animation: "heroFadeUp 0.9s 0.75s cubic-bezier(0.16,1,0.3,1) both",
             }}
           >
             AI systems and custom internal tools for founders who need them
             working in weeks, not pitch decks in months.
           </p>
 
-          <div ref={ctaRef} className="flex flex-wrap items-center gap-6 mt-10" style={{ opacity: 0 }}>
+          <div
+            className="flex flex-wrap items-center gap-6 mt-10"
+            style={{
+              animation: "heroFadeUp 0.7s 0.95s cubic-bezier(0.16,1,0.3,1) both",
+            }}
+          >
             <Magnetic strength={0.22}>
               <Link
                 href="/contact"
@@ -134,7 +101,6 @@ export function HeroSection() {
             </Magnetic>
           </div>
 
-          {/* Availability */}
           <p
             className="mt-8 text-xs"
             style={{ fontFamily: "var(--font-sans)", color: "var(--color-muted)" }}
@@ -151,10 +117,7 @@ export function HeroSection() {
       {/* Scroll indicator */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-40">
         <span className="text-xs eyebrow">Scroll</span>
-        <div
-          className="w-px h-12 overflow-hidden"
-          style={{ background: "var(--color-rule)" }}
-        >
+        <div className="w-px h-12 overflow-hidden" style={{ background: "var(--color-rule)" }}>
           <div
             className="w-px h-full"
             style={{
@@ -167,7 +130,7 @@ export function HeroSection() {
 
       <style>{`
         @keyframes scrollLine {
-          0% { transform: translateY(-100%); }
+          0%   { transform: translateY(-100%); }
           100% { transform: translateY(200%); }
         }
       `}</style>
