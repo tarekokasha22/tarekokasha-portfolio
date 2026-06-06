@@ -1,10 +1,40 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, useInView } from "motion/react";
 import { siteConfig } from "@/config/site";
 
 type FormState = "idle" | "loading" | "success" | "error";
+
+/** Live local time in Cairo — a quiet signal there's a real person here. */
+function CairoClock() {
+  const [now, setNow] = useState<string | null>(null);
+
+  useEffect(() => {
+    const tick = () =>
+      setNow(
+        new Intl.DateTimeFormat("en-US", {
+          timeZone: "Africa/Cairo",
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+        }).format(new Date())
+      );
+    tick();
+    const id = setInterval(tick, 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Render nothing until mounted to avoid hydration mismatch
+  if (!now) return null;
+
+  return (
+    <span style={{ color: "var(--color-muted)" }}>
+      {" — "}
+      <span style={{ color: "var(--color-accent)" }}>{now}</span> local
+    </span>
+  );
+}
 
 export function ContactPage() {
   const [formState, setFormState] = useState<FormState>("idle");
@@ -18,27 +48,49 @@ export function ContactPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const name = values.name.trim();
+    const email = values.email.trim();
+    const message = values.message.trim();
+    if (!name || !email || !message) {
+      setError("All three fields, please.");
+      setFormState("error");
+      return;
+    }
+
     setFormState("loading");
     setError("");
 
+    // Guaranteed delivery: open a pre-filled WhatsApp message to me. Done
+    // synchronously inside the click gesture so popup blockers allow it — no
+    // backend or API key required for the inquiry to actually reach me.
+    const wa = [
+      "New project inquiry",
+      "",
+      `Name: ${name}`,
+      `Email: ${email}`,
+      "",
+      message,
+    ].join("\n");
+    window.open(
+      `${siteConfig.whatsappLink}?text=${encodeURIComponent(wa)}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
+
+    // Best-effort email copy (delivers silently once an email provider env var
+    // is configured on the server; harmless if it isn't).
     try {
-      const res = await fetch("/api/contact", {
+      await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+        body: JSON.stringify({ name, email, message }),
       });
-
-      if (res.ok) {
-        setFormState("success");
-      } else {
-        const data = await res.json();
-        setError(data.error || "Couldn't send. Try email instead.");
-        setFormState("error");
-      }
     } catch {
-      setError("Couldn't send. Try email instead.");
-      setFormState("error");
+      /* WhatsApp already carried the message — don't fail the user */
     }
+
+    setFormState("success");
   };
 
   const inputStyle = {
@@ -146,6 +198,7 @@ export function ContactPage() {
                       style={{ fontFamily: "var(--font-sans)", color: "var(--color-muted)" }}
                     >
                       {siteConfig.location}
+                      <CairoClock />
                     </p>
                   </div>
                 </div>
@@ -201,7 +254,7 @@ export function ContactPage() {
                       fontWeight: 400,
                     }}
                   >
-                    I'll respond within 24h on weekdays.
+                    Got it — hit send in WhatsApp.
                   </h2>
                   <p
                     style={{
@@ -211,7 +264,8 @@ export function ContactPage() {
                       lineHeight: 1.7,
                     }}
                   >
-                    If it's urgent, the fastest path is email:{" "}
+                    A WhatsApp draft with your message just opened — press send and it
+                    reaches me directly. I reply within 24h on weekdays. Prefer email?{" "}
                     <a
                       href={`mailto:${siteConfig.email}`}
                       className="text-cream underline-accent"

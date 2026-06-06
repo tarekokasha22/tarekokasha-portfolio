@@ -106,8 +106,8 @@ export function SpaceBackground() {
       const isMobile = W < 768;
 
       // Denser field — more stars, capped for mobile perf
-      const maxStars = isMobile ? 120 : 260;
-      const total = Math.min(Math.floor((W * H) / 5000), maxStars);
+      const maxStars = isMobile ? 150 : 320;
+      const total = Math.min(Math.floor((W * H) / 4400), maxStars);
       const layerCount = [
         Math.floor(total * 0.50),
         Math.floor(total * 0.33),
@@ -148,11 +148,11 @@ export function SpaceBackground() {
         { nx: 0.83, ny: 0.55, r: 0.24, r0: 74,  g0: 144, b0: 217, a: 0.040, driftX: -0.000012, driftY:  0.000008, phase: 1.4 },
       ];
 
-      // More frequent shooting stars (6) with staggered cooldowns
-      shootingRef.current = Array.from({ length: 6 }, (_, i) => ({
+      // More frequent shooting stars (7) with staggered cooldowns
+      shootingRef.current = Array.from({ length: 7 }, (_, i) => ({
         x: 0, y: 0, angle: 0, speed: 0, length: 0, opacity: 0,
         active: false,
-        cooldown: 60 + i * 55,
+        cooldown: 55 + i * 50,
       }));
     };
 

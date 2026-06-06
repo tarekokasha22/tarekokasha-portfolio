@@ -2,7 +2,6 @@
 
 import { useRef } from "react";
 import { motion, useInView } from "motion/react";
-import { Reticle } from "@/components/ui/Reticle";
 
 const services = [
   {
@@ -18,6 +17,13 @@ const services = [
     description:
       "The tools your team needs but no SaaS vendor sells: ops dashboards, lead pipelines, custom CRMs, workflow engines. Built for the exact shape of your business. Yours to own, not subscribe to forever.",
     tags: ["Next.js", "TypeScript", "PostgreSQL", "Supabase"],
+  },
+  {
+    number: "03",
+    title: "Robotics & computer vision",
+    description:
+      "Voice-controlled pick-and-place on a UR5e arm: ROS 2 and MoveIt 2 for motion planning, a depth camera with real-time vision to locate and grasp objects, and a full Alexa → AWS Lambda → ROS 2 pipeline for spoken commands. Modular nodes, simulation-to-hardware ready. This is the systems engineering underneath everything else I build.",
+    tags: ["ROS 2", "MoveIt 2", "Computer Vision", "UR5e", "AWS Lambda", "Alexa"],
   },
 ];
 
@@ -143,78 +149,6 @@ export function ServicesSection() {
             </motion.div>
           ))}
         </div>
-
-        {/* ── Robotics highlight — the engineering underneath ───────── */}
-        <motion.div
-          initial={{ opacity: 0, y: 32 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ delay: 0.6, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-          className="robotics-panel relative mt-16 grid md:grid-cols-12 gap-8 md:gap-10 items-center p-8 md:p-12 overflow-hidden"
-        >
-          {/* Animated reticle */}
-          <div className="md:col-span-3 flex justify-center md:justify-start">
-            <Reticle active={isInView} />
-          </div>
-
-          {/* Copy */}
-          <div className="md:col-span-9">
-            <div className="flex items-center gap-4 mb-4">
-              <span
-                className="text-xs tabular"
-                style={{ fontFamily: "var(--font-sans)", color: "var(--color-accent)" }}
-              >
-                03
-              </span>
-              <p className="eyebrow" style={{ color: "var(--color-accent)" }}>
-                The engineering underneath
-              </p>
-            </div>
-            <h3
-              className="text-cream mb-5"
-              style={{
-                fontFamily: "var(--font-display)",
-                fontSize: "clamp(1.5rem, 2.6vw, 2.1rem)",
-                fontWeight: 400,
-                letterSpacing: "-0.02em",
-                lineHeight: 1.2,
-              }}
-            >
-              Robotics &amp; computer vision.
-            </h3>
-            <p
-              className="max-w-2xl mb-6"
-              style={{
-                fontFamily: "var(--font-sans)",
-                fontSize: "0.9375rem",
-                color: "var(--color-muted)",
-                lineHeight: 1.75,
-              }}
-            >
-              Before the software, the hardware. I built the USS UR5e — a 6-axis
-              robotic arm that picks, sorts, and places objects autonomously with
-              computer vision, and takes voice commands through Alexa and AWS. That
-              systems-level instinct — sensors, control loops, real-time constraints —
-              is what I bring to every AI and software build.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {["ROS", "Computer Vision", "UR5e 6-axis", "Embedded C", "Sensor Fusion", "Alexa", "AWS"].map(
-                (tag) => (
-                  <span
-                    key={tag}
-                    className="text-xs px-2.5 py-1"
-                    style={{
-                      fontFamily: "var(--font-sans)",
-                      color: "var(--color-muted)",
-                      border: "1px solid var(--color-rule)",
-                    }}
-                  >
-                    {tag}
-                  </span>
-                )
-              )}
-            </div>
-          </div>
-        </motion.div>
       </div>
     </section>
   );

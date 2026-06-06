@@ -5,8 +5,6 @@ import Image from "next/image";
 import { useRef } from "react";
 import { motion, useInView } from "motion/react";
 import { siteConfig } from "@/config/site";
-import { Reticle } from "@/components/ui/Reticle";
-import { SpaceBackground } from "@/components/ui/SpaceBackground";
 
 const principles = [
   {
@@ -126,10 +124,10 @@ export function AboutPage() {
                     lineHeight: 1.75,
                   }}
                 >
-                  I'm an engineer based in Cairo, working with founders and operators around the world
-                  on AI systems, automations, custom internal software, and robotics. I take on a small
-                  number of projects each year and build them like real software — with tests,
-                  observability, and a written architecture I'd hand to my successor.
+                  I'm a software engineer in Cairo. I build AI systems, automations, and custom
+                  internal software for founders and operating teams — the tools a business runs on
+                  every day. I take a handful of projects a year and build each one properly: tested,
+                  documented, and handed over with an architecture the next engineer can actually read.
                 </p>
                 <p
                   style={{
@@ -139,137 +137,15 @@ export function AboutPage() {
                     lineHeight: 1.75,
                   }}
                 >
-                  This isn't for early-stage founders without a clear scope. If you have a vague idea
-                  and want me to figure it out, that's not how I work well. But if you have a real
-                  operational problem — a process that runs on spreadsheets and goodwill, a workflow
-                  that burns your team's hours every week, a system that needs to actually exist — I
-                  can probably help.
+                  I'm not the right call for a vague idea you want someone to figure out. I'm the right
+                  call when the problem is real and expensive — a process held together by spreadsheets
+                  and goodwill, a workflow quietly eating your team's week, a system your business needs
+                  that no vendor sells. Bring me that, and I'll build the thing that makes it go away.
                 </p>
               </div>
             </motion.div>
           </div>
         </div>
-
-        {/* Robotics showcase */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={heroInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ delay: 0.4, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-          className="mb-24 py-10 border-t border-rule"
-        >
-          <div className="grid md:grid-cols-12 gap-8">
-            <div className="md:col-span-3">
-              <p className="eyebrow">Robotics</p>
-            </div>
-            <div className="md:col-span-9">
-              <div
-                className="robotics-panel relative overflow-hidden p-8 md:p-12"
-                style={{ minHeight: 320 }}
-              >
-                {/* Moving star field */}
-                <div className="absolute inset-0 opacity-60 pointer-events-none">
-                  <SpaceBackground />
-                </div>
-                {/* Readability scrim */}
-                <div
-                  className="absolute inset-0 pointer-events-none"
-                  style={{
-                    background:
-                      "linear-gradient(90deg, rgba(11,11,12,0.72), rgba(11,11,12,0.34) 65%, transparent)",
-                  }}
-                />
-
-                <div className="relative z-10 grid md:grid-cols-12 gap-8 md:gap-10 items-center">
-                  {/* Animated reticle */}
-                  <div className="md:col-span-4 flex justify-center md:justify-start">
-                    <Reticle size={156} active={heroInView} />
-                  </div>
-
-                  {/* Copy */}
-                  <div className="md:col-span-8">
-                    <p className="eyebrow mb-4" style={{ color: "var(--color-accent)" }}>
-                      The engineering underneath
-                    </p>
-                    <h3
-                      className="text-cream mb-5"
-                      style={{
-                        fontFamily: "var(--font-display)",
-                        fontSize: "clamp(1.5rem, 2.6vw, 2.1rem)",
-                        fontWeight: 400,
-                        letterSpacing: "-0.02em",
-                        lineHeight: 1.2,
-                      }}
-                    >
-                      Robotics &amp; computer vision.
-                    </h3>
-                    <p
-                      className="mb-6"
-                      style={{
-                        fontFamily: "var(--font-sans)",
-                        fontSize: "1rem",
-                        color: "var(--color-muted)",
-                        lineHeight: 1.75,
-                        maxWidth: "52ch",
-                      }}
-                    >
-                      Before the software, the hardware. At the German International University
-                      I built the USS UR5e — a 6-axis robotic arm that picks, sorts, and places
-                      objects autonomously with computer vision, and takes voice commands through
-                      Alexa and AWS. Sensors, control loops, real-time constraints: that
-                      systems-level instinct is what I bring to every AI and software build.
-                    </p>
-
-                    {/* Live telemetry */}
-                    <div className="flex flex-wrap gap-x-6 gap-y-3 mb-6">
-                      {[
-                        "6-axis articulation",
-                        "Vision-guided pick & place",
-                        "Voice control · Alexa + AWS",
-                        "Real-time control loops",
-                      ].map((spec) => (
-                        <span
-                          key={spec}
-                          className="inline-flex items-center gap-2 text-xs"
-                          style={{
-                            fontFamily: "var(--font-sans)",
-                            color: "var(--color-muted)",
-                            letterSpacing: "0.08em",
-                            textTransform: "uppercase",
-                          }}
-                        >
-                          <span
-                            className="avail-dot inline-block w-1.5 h-1.5 rounded-full shrink-0"
-                            style={{ background: "var(--color-accent)" }}
-                          />
-                          {spec}
-                        </span>
-                      ))}
-                    </div>
-
-                    {/* Tags */}
-                    <div className="flex flex-wrap gap-2">
-                      {["ROS", "Computer Vision", "OpenCV", "UR5e", "Embedded C", "Sensor Fusion"].map(
-                        (tag) => (
-                          <span
-                            key={tag}
-                            className="text-xs px-2.5 py-1"
-                            style={{
-                              fontFamily: "var(--font-sans)",
-                              color: "var(--color-muted)",
-                              border: "1px solid var(--color-rule)",
-                            }}
-                          >
-                            {tag}
-                          </span>
-                        )
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </motion.div>
 
         {/* Background */}
         <div className="mb-24 py-10 border-t border-rule">
@@ -287,10 +163,10 @@ export function AboutPage() {
                     lineHeight: 1.75,
                   }}
                 >
-                  I studied engineering at the German International University, where I built
-                  my first AI system in my second year — an auction-pricing model for a friend's
-                  electronics resale business. It worked better than expected and worse than I'd promised,
-                  which is the shape of most projects since.
+                  I came up through engineering school in Cairo, but I learned the most from the
+                  things I built on the side. The first was an auction-pricing model for a friend who
+                  flipped electronics — it made him money and taught me that a system is only as good
+                  as the messy reality it has to survive. Most projects since have had the same shape.
                 </p>
                 <p
                   style={{
@@ -300,11 +176,11 @@ export function AboutPage() {
                     lineHeight: 1.75,
                   }}
                 >
-                  Before going independent, I worked on robotics research, built internal tools for
-                  small businesses, and shipped my first paid software project at 20. I went independent
-                  because client work was more interesting than most jobs I could see — and because
-                  seeing something you built go live for real is a different kind of feedback than
-                  anything you get in an office.
+                  Since then I've shipped robotics work, internal tools for small businesses, and a
+                  string of paid software projects — the first at 20. I went independent because
+                  building for real clients beat every job I could see waiting on the other side of
+                  graduation. Watching something you built go live, with real people depending on it,
+                  is a kind of feedback an office never gives you.
                 </p>
                 <p
                   style={{
@@ -314,9 +190,9 @@ export function AboutPage() {
                     lineHeight: 1.75,
                   }}
                 >
-                  I'm 22. I work across Cairo and remotely with clients in the Gulf, Egypt, and globally.
-                  Most of my clients found me through referral, which is the only metric of client
-                  satisfaction I've ever trusted.
+                  I'm 22, based in Cairo, and I work remotely with clients across the Gulf, Egypt, and
+                  beyond. Almost all of them came by referral — the only measure of client satisfaction
+                  I've ever fully trusted.
                 </p>
               </div>
             </div>

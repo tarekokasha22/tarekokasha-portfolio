@@ -11,7 +11,7 @@ export const siteConfig = {
   location: "Cairo, Egypt — Remote",
   availability: "Currently booking projects",
   tagline: "Software that pays for itself.",
-  subtagline: "AI systems and custom internal tools for founders who need them working in weeks, not quarters.",
+  subtagline: "AI systems, internal tools, and automations — engineered with the discipline of robotics and shipped in weeks. Real software that runs in production without you watching it.",
 } as const;
 
 export const navLinks = [
@@ -71,11 +71,11 @@ export const projects = [
   },
   {
     slug: "robotics-arm",
-    client: "German International University",
-    title: "USS UR5e — Robotic crew operations simulation",
-    oneLineOutcome: "Built a full robotic arm that picks, sorts, and places objects autonomously.",
-    year: 2023,
-    tags: ["Robotics", "Computer Vision", "Academic"],
+    client: "Robotics R&D",
+    title: "Voice-controlled UR5e pick-and-place robot",
+    oneLineOutcome: "A UR5e arm that finds, grips, and places objects on a spoken command — end to end.",
+    year: 2025,
+    tags: ["Robotics", "ROS 2", "Computer Vision"],
     featured: true,
     order: 3,
     image: "/images/robotics.png",

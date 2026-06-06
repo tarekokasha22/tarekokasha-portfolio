@@ -14,9 +14,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "That email looks off — typo, maybe?" }, { status: 400 });
     }
 
+    // Option 0 — Web3Forms (no domain verification: get a free access key at
+    //   web3forms.com with your email, add WEB3FORMS_ACCESS_KEY to env vars)
+    if (process.env.WEB3FORMS_ACCESS_KEY) {
+      const res = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          access_key: process.env.WEB3FORMS_ACCESS_KEY,
+          subject: `New project inquiry from ${name}`,
+          from_name: name,
+          replyto: email,
+          name,
+          email,
+          message,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.message || "Web3Forms error");
+      }
+    }
     // Option 1 — Formspree (easiest setup: sign up at formspree.io, create a form,
     //   add FORMSPREE_ENDPOINT=https://formspree.io/f/YOUR_ID to env vars)
-    if (process.env.FORMSPREE_ENDPOINT) {
+    else if (process.env.FORMSPREE_ENDPOINT) {
       const res = await fetch(process.env.FORMSPREE_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },

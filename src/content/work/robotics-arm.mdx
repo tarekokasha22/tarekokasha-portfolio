@@ -1,75 +1,63 @@
 ---
-title: "6-DOF robotic arm with computer vision for academic research"
+title: "Voice-controlled UR5e pick-and-place robot"
 slug: "robotics-arm"
-client: "German International University in Cairo"
-year: 2023
-role: "Lead engineer (team of 4)"
-duration: "7 months"
-oneLineOutcome: "Built a full robotic arm that picks, sorts, and places objects autonomously."
-tags: ["Robotics", "Computer Vision", "Python", "Academic"]
-publishedAt: "2023-12-01"
+client: "Robotics R&D"
+year: 2025
+role: "Robotics software engineer"
+duration: "4 months"
+oneLineOutcome: "A UR5e arm that finds, grips, and places objects on a spoken command — end to end."
+tags: ["Robotics", "ROS 2", "MoveIt 2", "Computer Vision"]
+publishedAt: "2025-03-01"
 order: 5
 featured: false
 ---
 
 ## Context
 
-This was my final-year graduation project at the German International University in Cairo. I'm including it here not because it's the most commercially impressive thing I've built, but because it's where I learned how to think about systems — specifically, how every layer of a real system touches every other layer in ways that become obvious only after something breaks spectacularly at 11pm the night before a demonstration.
+I build software for businesses now, but the way I think about systems came from robotics. This is the project that taught it to me: a voice-controlled pick-and-place robot built on a **Universal Robots UR5e** — a real 6-DOF industrial manipulator — that hears a spoken command, finds the right object with a depth camera, plans a collision-free path, and places it where it was asked to.
 
-The brief: design and build a 6-degree-of-freedom robotic arm capable of identifying objects on a conveyor belt, sorting them by color and shape, and placing them in designated positions. The arm had to work in real time, using computer vision for object detection, without requiring human intervention once the task was initiated.
+The point wasn't a clever demo. It was to build the whole chain the way production software is built — decoupled components, a clear contract between each layer, a simulation that mirrors the hardware so you can develop without breaking anything expensive, and one flag that flips the entire stack from simulation to a physical arm.
 
-This is a well-understood academic problem. The implementation was not.
+A robot is the most honest system you can build. There's no hiding a bad abstraction behind a loading spinner. Either the gripper closes on the object or it closes on air.
 
-## Constraints
+## The system
 
-**No off-the-shelf arm.** The project required us to design and fabricate the physical arm, not just program a commercial unit. This added mechanical engineering to the scope. None of the four of us were mechanical engineers. We learned quickly.
+The pipeline runs end to end across the cloud and the local machine:
 
-**Real-time computer vision on constrained hardware.** The detection pipeline had to run fast enough to work with a conveyor belt running at a realistic speed. We had a Raspberry Pi 4 and a webcam. That's it.
+**Voice → cloud → robot.** You say *"Alexa, go to task one."* Amazon Alexa handles the natural-language understanding and fires an **AWS Lambda** function (eu-west-1), which posts the command over an HTTPS tunnel to a Flask endpoint on the robot's machine. A ROS 2 bridge node turns that into a message on the `/robot/task_command` topic. Nothing downstream knows or cares that the command came from a voice — it's just an integer on a topic, which is exactly the decoupling you want.
 
-**Precision under uncertainty.** Industrial robotic arms use precise servo encoders and known kinematics. Our arm used hobby servo motors with backlash, imprecise 3D-printed joints, and hand-calibrated kinematics. Getting reliable pick-and-place to work on a mechanically imperfect arm required compensation code that was, diplomatically, creative.
+**Perception.** A Microsoft Kinect depth camera continuously scans the workspace. When a target is named, the vision node segments it by colour in HSV space, runs contour analysis to find its centroid and shape, and back-projects those pixel coordinates through the depth channel into a real 3-D pose in the robot's world frame. Colour segmentation over a neural model was a deliberate call — on a controlled workspace it's faster, fully deterministic, and trivial to debug when something goes wrong at the wrong hour.
 
-**Team of four, seven months, no budget.** The project cost approximately EGP 8,000 in parts, mostly from Cairo's electronics market in Ataba. We designed around what was available, not what was ideal.
+**Motion planning.** The target pose goes to **MoveIt 2**, which plans a full grasp sequence — pre-grasp approach, grasp, lift, transport, place — using OMPL/RRTConnect with position and orientation constraints so the arm never tries to drive through itself or the table. The trajectory executes on the UR5e through the `scaled_joint_trajectory_controller`, and a **Robotiq 2F-85** parallel-jaw gripper opens and closes around the object.
 
-## What I built
-
-My contribution focused on the software stack: computer vision, inverse kinematics, and the control layer that connected perception to motion.
-
-**Computer vision pipeline.** I used OpenCV for object detection, running on the Raspberry Pi. The pipeline captured frames from the webcam, applied color segmentation to identify objects by category, and used contour detection to estimate position on the conveyor. The challenge was lighting — the Ataba components included no consistent lighting, so I built adaptive white balancing and brightness normalization that adjusted to whatever the ambient light happened to be on a given day. In practice, this meant the system was robust enough to work under the fluorescent lights in the lab, the natural light from the windows, and the yellow sodium vapor lights in the hallway when we accidentally tested it there at midnight.
-
-**Inverse kinematics solver.** Given a target position in 3D space (from the computer vision output), the IK solver calculated the joint angles required to reach that position. For a 6-DOF arm, this is not a trivial calculation — there are often multiple valid solutions, and some solutions require the arm to pass through positions it can't physically reach. I implemented a numerical IK solver using the Jacobian pseudo-inverse method, with collision avoidance that constrained solutions to physically reachable configurations. The solver ran in under 8ms per calculation on the Pi, which was the hard deadline for smooth motion.
-
-**Servo control layer.** The calculated joint angles were translated to PWM signals for 6 servo motors, with timing calibrated against each motor's measured response characteristics. The backlash compensation code here is the part I'm least proud of technically and most proud of practically — it was a hack, it worked, and it worked consistently.
-
-**Sorting logic.** Once the arm identified an object's position and category, the sorting logic determined the target placement position (red objects to zone A, blue to B, etc.), planned the pick-and-place sequence, and executed it with appropriate safety pauses. The whole sequence — identify, pick, move, place, return — took about 4 seconds per object.
+**Four nodes, one job each.** The whole thing is four decoupled ROS 2 nodes communicating over topics: the Alexa bridge, the vision node, the task executor (a MoveGroup client), and the gripper controller. Tasks themselves live in YAML — you add or edit a pick-and-place routine without touching a line of Python.
 
 ## Decisions & tradeoffs
 
-**OpenCV vs. a pre-trained neural network model.** We evaluated using a small YOLO model for detection. It would have been more robust to edge cases and unusual objects. We stuck with classical computer vision (color segmentation + contour detection) for two reasons: the Raspberry Pi's processing power made neural inference too slow for real-time use, and the objects we were sorting were controlled enough that the simpler approach worked reliably. If the objects had been variable or the lighting uncontrolled, we'd have needed the model.
+**Simulation that mirrors hardware, not approximates it.** The system runs fully in simulation with a synthetic Kinect stream and a fake UR5e driver, visualised live in RViz2. The same code path runs the real arm — `use_fake_hardware=false` is the only change. This is the single most valuable design decision in the project: every line of logic was developed, broken, and fixed in simulation, so the physical arm only ever ran code that had already worked.
 
-**3D-printed joints vs. laser-cut acrylic.** We printed the joints in PLA plastic on the university's printer. The dimensional accuracy was ±0.3mm, which introduced backlash in every joint. Laser-cut acrylic would have been more precise and faster to manufacture. We chose 3D printing because it allowed more complex geometry in the joint design. In retrospect, simpler geometry with better dimensional accuracy would have been the right tradeoff.
+**Classical vision over a trained model.** A small detection model would generalise better to unusual objects and lighting. On a known workspace with controlled objects, HSV segmentation plus contour analysis was faster, needed no training data, and never surprised me. If the objects or the lighting were uncontrolled, that tradeoff flips — and I'd reach for the model.
 
-**Python vs. C++ for the control software.** Python was the pragmatic choice — faster development, better OpenCV support, more familiar to the team. The performance constraints (8ms IK, real-time video) were achievable in Python with careful optimization. A C++ implementation would have run faster but would have taken 3x longer to write. For a 7-month academic project, Python was correct.
+**Three input modes, one pipeline.** Alexa voice, a local microphone (Google Speech Recognition), and plain keyboard input all converge on the same `/robot/task_command` topic. Building the contract at the topic — not at the input — meant adding a new way to command the robot never touched the motion or perception code.
 
 ## Outcome
 
 <StatGroup>
-  <Stat value="6-DOF" caption="Degrees of freedom in the fabricated arm" />
-  <Stat value="94%" caption="Object detection accuracy across test runs" />
-  <Stat value="4s" caption="Average pick-place cycle time" />
+  <Stat value="6-DOF" caption="UR5e arm under full MoveIt 2 motion planning" />
+  <Stat value="Sim → real" caption="One flag switches the fake driver to a physical UR5e" />
+  <Stat value="3 inputs" caption="Alexa voice, local mic, or keyboard — same pipeline" />
 </StatGroup>
 
-The project received a distinction grade. More importantly, it demonstrated that a team of 4 undergraduates with EGP 8,000 and 7 months could build something that worked — not perfectly, but consistently and measurably.
+The robot does what it was asked: hears a command, locates the object, plans a clean path, grips it, moves it, and sets it down. The architecture is the part I'm proud of — a cloud voice layer, a perception layer, a planning layer, and a hardware layer, each able to be tested, swapped, or rebuilt without disturbing the others.
 
-The computer vision pipeline ran reliably. The IK solver worked. The arm picked up objects and put them where we said it would. The part that impressed the examining committee wasn't the sophistication of any individual component — it was that all the components worked together without any of us having prior experience with any of the domains involved.
+That's the same instinct I bring to every AI and software system I build now: decouple the layers, define the contract between them, and make the thing observable enough that when it breaks — and it will — you know exactly where to look.
 
 ## What I'd do differently
 
-Calibration took far longer than it should have. We spent the equivalent of 3 weeks total on calibrating servo positions, adjusting backlash compensation parameters, and re-tuning the IK constraints after mechanical changes. A proper calibration protocol — designed before the arm was built, with clear measurement procedures — would have halved that time. Instead, we figured it out as we went, which is a reasonable approach for learning and a terrible approach for shipping.
+The HSV thresholds are hand-tuned and assume reasonably stable lighting. A short auto-calibration routine at startup — sample the workspace, fit the thresholds — would make the perception layer robust to a room it had never seen, instead of one it was tuned for.
 
-I'd also do more formal testing. We ran ~200 test pick-and-place cycles informally, but without systematic recording of failure modes and conditions. When something went wrong, we fixed it without always understanding why it had broken. A proper test matrix would have caught several recurring issues much earlier.
+I'd also add a proper grasp-verification step. Right now the system assumes a commanded grasp succeeded; a force-feedback or vision check after closing the gripper would let it detect a miss and retry, which is the difference between a robot that works and a robot you can trust unattended.
 
 ## Built with
 
-Team of four. I was responsible for software architecture, computer vision pipeline, IK solver, and servo control layer. Mechanical design and fabrication led by teammates. Python, OpenCV, NumPy, SciPy. Raspberry Pi 4, 6× MG996R servo motors, custom 3D-printed and aluminum frame. Total build cost: ~EGP 8,000.
-
-*(Yes, the arm occasionally thought a shadow was an object. We called it a feature.)*
+ROS 2 Humble, MoveIt 2, Python 3.10 on Ubuntu 22.04. Universal Robots UR5e with a Robotiq 2F-85 gripper. Microsoft Kinect depth camera with OpenCV for HSV segmentation and contour detection. Amazon Alexa and AWS Lambda for the voice pipeline, bridged to ROS 2 over a Flask/HTTPS tunnel. RViz2 for simulation and visualisation.
