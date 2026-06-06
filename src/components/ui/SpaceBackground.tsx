@@ -47,6 +47,8 @@ interface Nebula {
 }
 
 const PARALLAX = [0.04, 0.14, 0.32] as const;
+// How far each layer shifts with the mouse (depth parallax) — px at edge
+const MOUSE_DEPTH = [6, 16, 34] as const;
 
 const STAR_COLORS = [
   "rgba(244,239,230,",
@@ -58,9 +60,15 @@ const STAR_COLORS = [
 // Target 30fps — stars look identical to 60fps, uses half the GPU budget
 const FRAME_INTERVAL = 1000 / 30;
 
+// Reusable buffer for the cursor constellation — avoids per-frame allocation
+const NEAR_MAX = 14;
+
 export function SpaceBackground() {
   const canvasRef     = useRef<HTMLCanvasElement>(null);
   const mouseRef      = useRef({ x: -9999, y: -9999 });
+  // Smoothed normalized mouse position (-0.5..0.5) for depth parallax
+  const mouseNormRef  = useRef({ x: 0, y: 0 });
+  const mouseSmoothRef = useRef({ x: 0, y: 0 });
   const scrollRef     = useRef(0);
   const starsRef      = useRef<Star[]>([]);
   const shootingRef   = useRef<ShootingStar[]>([]);
@@ -73,6 +81,8 @@ export function SpaceBackground() {
   // Cached layout values — updated only on resize/scroll, not every frame
   const rectRef       = useRef({ left: 0, top: 0 });
   const vignetteRef   = useRef<CanvasGradient | null>(null);
+  // Constellation buffer (x, y, prox) — fixed length, reused each frame
+  const nearRef       = useRef(new Float32Array(NEAR_MAX * 3));
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -95,8 +105,9 @@ export function SpaceBackground() {
       const H = canvas.height;
       const isMobile = W < 768;
 
-      const maxStars = isMobile ? 70 : 150;
-      const total = Math.min(Math.floor((W * H) / 7000), maxStars);
+      // Denser field — more stars, capped for mobile perf
+      const maxStars = isMobile ? 120 : 260;
+      const total = Math.min(Math.floor((W * H) / 5000), maxStars);
       const layerCount = [
         Math.floor(total * 0.50),
         Math.floor(total * 0.33),
@@ -122,8 +133,9 @@ export function SpaceBackground() {
               : Math.random() * 0.65 + 0.2,
             twinkleSpeed:  Math.random() * 0.018 + 0.004,
             twinkleOffset: Math.random() * Math.PI * 2,
-            dx: (Math.random() - 0.5) * (layer === 0 ? 0.018 : layer === 1 ? 0.028 : 0.045),
-            dy: (Math.random() - 0.5) * (layer === 0 ? 0.012 : layer === 1 ? 0.020 : 0.030),
+            // Slightly livelier drift so motion reads clearly
+            dx: (Math.random() - 0.5) * (layer === 0 ? 0.024 : layer === 1 ? 0.038 : 0.058),
+            dy: (Math.random() - 0.5) * (layer === 0 ? 0.016 : layer === 1 ? 0.026 : 0.040),
             layer: layer as 0 | 1 | 2,
             colorIdx,
           });
@@ -136,10 +148,11 @@ export function SpaceBackground() {
         { nx: 0.83, ny: 0.55, r: 0.24, r0: 74,  g0: 144, b0: 217, a: 0.040, driftX: -0.000012, driftY:  0.000008, phase: 1.4 },
       ];
 
-      shootingRef.current = Array.from({ length: 4 }, (_, i) => ({
+      // More frequent shooting stars (6) with staggered cooldowns
+      shootingRef.current = Array.from({ length: 6 }, (_, i) => ({
         x: 0, y: 0, angle: 0, speed: 0, length: 0, opacity: 0,
         active: false,
-        cooldown: 100 + i * 80,
+        cooldown: 60 + i * 55,
       }));
     };
 
@@ -164,15 +177,21 @@ export function SpaceBackground() {
 
     const onMouse = (e: MouseEvent) => {
       mouseRef.current = { x: e.clientX, y: e.clientY };
+      const W = canvas.width || 1;
+      const H = canvas.height || 1;
+      mouseNormRef.current = {
+        x: (e.clientX - rectRef.current.left) / W - 0.5,
+        y: (e.clientY - rectRef.current.top) / H - 0.5,
+      };
     };
 
     const onClick = (e: MouseEvent) => {
       const r = canvas.getBoundingClientRect();
       const cx = e.clientX - r.left;
       const cy = e.clientY - r.top;
-      for (let i = 0; i < 12; i++) {
-        const angle = (i / 12) * Math.PI * 2 + Math.random() * 0.5;
-        const speed = Math.random() * 3.5 + 1.2;
+      for (let i = 0; i < 16; i++) {
+        const angle = (i / 16) * Math.PI * 2 + Math.random() * 0.5;
+        const speed = Math.random() * 3.8 + 1.2;
         particlesRef.current.push({
           x: cx, y: cy,
           vx: Math.cos(angle) * speed,
@@ -196,6 +215,12 @@ export function SpaceBackground() {
       tRef.current++;
       const t = tRef.current;
       const scroll = scrollRef.current;
+
+      // Ease the depth-parallax offset toward the live mouse position
+      const ms = mouseSmoothRef.current;
+      const mn = mouseNormRef.current;
+      ms.x += (mn.x - ms.x) * 0.06;
+      ms.y += (mn.y - ms.y) * 0.06;
 
       ctx.clearRect(0, 0, W, H);
 
@@ -225,17 +250,23 @@ export function SpaceBackground() {
       const mx = mouseRef.current.x - rectRef.current.left;
       const my = mouseRef.current.y - rectRef.current.top;
 
-      // Stars — layered parallax
+      // Constellation buffer reset
+      const near = nearRef.current;
+      let nearCount = 0;
+
+      // Stars — layered parallax + mouse depth
       starsRef.current.forEach((s) => {
         const parallaxFactor = PARALLAX[s.layer];
+        const depth = MOUSE_DEPTH[s.layer];
 
         if (!prefersReduced) {
           s.x = (s.x + s.dx / W + 1) % 1;
           s.y = (s.y + s.dy / H + 1) % 1;
         }
 
-        const screenX = s.x * W;
-        const screenY = ((s.y * H + scroll * parallaxFactor) % H + H) % H;
+        // Depth parallax: nearer layers shift more with the mouse
+        const screenX = s.x * W - ms.x * depth;
+        const screenY = ((s.y * H + scroll * parallaxFactor) % H + H) % H - ms.y * depth;
 
         const twinkle = prefersReduced
           ? 1
@@ -249,6 +280,15 @@ export function SpaceBackground() {
         let prox = 0;
         if (distSq < proxRange * proxRange) {
           prox = (1 - Math.sqrt(distSq) / proxRange) * (s.layer === 2 ? 1.0 : 0.6);
+
+          // Record bright nearby stars for the cursor constellation
+          if (s.layer === 2 && nearCount < NEAR_MAX) {
+            const b = nearCount * 3;
+            near[b] = screenX;
+            near[b + 1] = screenY;
+            near[b + 2] = prox;
+            nearCount++;
+          }
         }
 
         const op = Math.min(1, s.baseOpacity * twinkle + prox * 0.9);
@@ -279,6 +319,42 @@ export function SpaceBackground() {
           ctx.fill();
         }
       });
+
+      // ── Cursor constellation ─────────────────────────────────────
+      // Connect nearby bright stars to each other and to the cursor.
+      // nearCount is small (≤ NEAR_MAX), so the O(k²) pass is cheap.
+      if (nearCount > 1 && !prefersReduced) {
+        ctx.lineWidth = 0.6;
+        for (let i = 0; i < nearCount; i++) {
+          const ax = near[i * 3];
+          const ay = near[i * 3 + 1];
+          const ap = near[i * 3 + 2];
+
+          // Star → cursor thread
+          ctx.strokeStyle = `rgba(201,169,97,${(ap * 0.28).toFixed(3)})`;
+          ctx.beginPath();
+          ctx.moveTo(ax, ay);
+          ctx.lineTo(mx, my);
+          ctx.stroke();
+
+          // Star → star links
+          for (let j = i + 1; j < nearCount; j++) {
+            const bx = near[j * 3];
+            const by = near[j * 3 + 1];
+            const lx = ax - bx;
+            const ly = ay - by;
+            const d2 = lx * lx + ly * ly;
+            if (d2 < 130 * 130) {
+              const fade = (1 - Math.sqrt(d2) / 130) * Math.min(ap, near[j * 3 + 2]);
+              ctx.strokeStyle = `rgba(201,169,97,${(fade * 0.4).toFixed(3)})`;
+              ctx.beginPath();
+              ctx.moveTo(ax, ay);
+              ctx.lineTo(bx, by);
+              ctx.stroke();
+            }
+          }
+        }
+      }
 
       // Shooting stars
       if (!prefersReduced) {
@@ -318,7 +394,7 @@ export function SpaceBackground() {
 
             if (ss.opacity <= 0 || ss.x > W + 150 || ss.y > H + 150) {
               ss.active   = false;
-              ss.cooldown = Math.floor(Math.random() * 280 + 120);
+              ss.cooldown = Math.floor(Math.random() * 220 + 80);
             }
           }
         });

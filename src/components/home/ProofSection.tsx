@@ -88,7 +88,7 @@ export function ProofSection() {
       value: "5",
       numericValue: 5,
       caption: "Systems in production",
-      sub: "From AI photography studios to construction ERPs. Each one shipped and running.",
+      sub: "From AI photography studios to construction ERPs to autonomous robotics. Each one shipped and running.",
     },
   ];
 
