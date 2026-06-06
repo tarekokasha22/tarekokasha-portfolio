@@ -55,19 +55,24 @@ const STAR_COLORS = [
   "rgba(255,255,255,",
 ] as const;
 
+// Target 30fps — stars look identical to 60fps, uses half the GPU budget
+const FRAME_INTERVAL = 1000 / 30;
+
 export function SpaceBackground() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const mouseRef = useRef({ x: -9999, y: -9999 });
-  const scrollRef = useRef(0);
-  const starsRef = useRef<Star[]>([]);
-  const shootingRef = useRef<ShootingStar[]>([]);
-  const particlesRef = useRef<Particle[]>([]);
-  const nebulasRef = useRef<Nebula[]>([]);
-  const rafRef = useRef<number>(0);
-  const tRef = useRef(0);
+  const canvasRef     = useRef<HTMLCanvasElement>(null);
+  const mouseRef      = useRef({ x: -9999, y: -9999 });
+  const scrollRef     = useRef(0);
+  const starsRef      = useRef<Star[]>([]);
+  const shootingRef   = useRef<ShootingStar[]>([]);
+  const particlesRef  = useRef<Particle[]>([]);
+  const nebulasRef    = useRef<Nebula[]>([]);
+  const rafRef        = useRef<number>(0);
+  const startTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tRef          = useRef(0);
+  const lastTimeRef   = useRef(0);
   // Cached layout values — updated only on resize/scroll, not every frame
-  const rectRef = useRef({ left: 0, top: 0 });
-  const vignetteRef = useRef<CanvasGradient | null>(null);
+  const rectRef       = useRef({ left: 0, top: 0 });
+  const vignetteRef   = useRef<CanvasGradient | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -90,8 +95,8 @@ export function SpaceBackground() {
       const H = canvas.height;
       const isMobile = W < 768;
 
-      const maxStars = isMobile ? 80 : 180;
-      const total = Math.min(Math.floor((W * H) / 6000), maxStars);
+      const maxStars = isMobile ? 70 : 150;
+      const total = Math.min(Math.floor((W * H) / 7000), maxStars);
       const layerCount = [
         Math.floor(total * 0.50),
         Math.floor(total * 0.33),
@@ -125,18 +130,16 @@ export function SpaceBackground() {
         }
       }
 
+      // 2 nebulae max — each does a full-canvas fill, keep it lean
       nebulasRef.current = [
         { nx: 0.10, ny: 0.18, r: 0.28, r0: 201, g0: 169, b0: 97,  a: 0.050, driftX:  0.000018, driftY:  0.000010, phase: 0   },
         { nx: 0.83, ny: 0.55, r: 0.24, r0: 74,  g0: 144, b0: 217, a: 0.040, driftX: -0.000012, driftY:  0.000008, phase: 1.4 },
-        ...(!isMobile ? [
-          { nx: 0.50, ny: 0.05, r: 0.18, r0: 201, g0: 169, b0: 97, a: 0.028, driftX: 0.000010, driftY: -0.000006, phase: 2.7 },
-        ] : []),
       ];
 
-      shootingRef.current = Array.from({ length: 5 }, (_, i) => ({
+      shootingRef.current = Array.from({ length: 4 }, (_, i) => ({
         x: 0, y: 0, angle: 0, speed: 0, length: 0, opacity: 0,
         active: false,
-        cooldown: 80 + i * 70,
+        cooldown: 100 + i * 80,
       }));
     };
 
@@ -180,7 +183,14 @@ export function SpaceBackground() {
       }
     };
 
-    const draw = () => {
+    const draw = (timestamp: number) => {
+      // 30fps cap — bail early if not enough time has elapsed
+      if (timestamp - lastTimeRef.current < FRAME_INTERVAL) {
+        rafRef.current = requestAnimationFrame(draw);
+        return;
+      }
+      lastTimeRef.current = timestamp;
+
       const W = canvas.width;
       const H = canvas.height;
       tRef.current++;
@@ -231,7 +241,7 @@ export function SpaceBackground() {
           ? 1
           : Math.sin(t * s.twinkleSpeed + s.twinkleOffset) * 0.3 + 0.7;
 
-        // Skip sqrt until we know the star is in range (avoids 180 sqrt calls/frame)
+        // distSq check before sqrt — skips sqrt for the vast majority of stars
         const ddx = screenX - mx;
         const ddy = screenY - my;
         const distSq = ddx * ddx + ddy * ddy;
@@ -275,12 +285,12 @@ export function SpaceBackground() {
         shootingRef.current.forEach((ss) => {
           if (!ss.active) {
             if (--ss.cooldown <= 0) {
-              ss.active = true;
-              ss.x      = Math.random() * W * 0.75 + W * 0.05;
-              ss.y      = Math.random() * H * 0.50;
-              ss.angle  = Math.PI / 5 + (Math.random() - 0.5) * 0.35;
-              ss.speed  = Math.random() * 10 + 8;
-              ss.length = Math.random() * 120 + 60;
+              ss.active  = true;
+              ss.x       = Math.random() * W * 0.75 + W * 0.05;
+              ss.y       = Math.random() * H * 0.50;
+              ss.angle   = Math.PI / 5 + (Math.random() - 0.5) * 0.35;
+              ss.speed   = Math.random() * 10 + 8;
+              ss.length  = Math.random() * 120 + 60;
               ss.opacity = 0.95;
             }
           } else {
@@ -343,18 +353,23 @@ export function SpaceBackground() {
     window.addEventListener("click",     onClick);
 
     if (prefersReduced) {
-      draw();
-      cancelAnimationFrame(rafRef.current);
+      // Single static frame for reduced-motion users
+      draw(0);
     } else {
-      rafRef.current = requestAnimationFrame(draw);
+      // Delay canvas start by 500ms — lets the CSS hero animation and first
+      // paint complete before the canvas loop competes for the main thread
+      startTimerRef.current = setTimeout(() => {
+        rafRef.current = requestAnimationFrame(draw);
+      }, 500);
     }
 
     return () => {
+      if (startTimerRef.current) clearTimeout(startTimerRef.current);
+      cancelAnimationFrame(rafRef.current);
       window.removeEventListener("resize",    resize);
       window.removeEventListener("mousemove", onMouse);
       window.removeEventListener("click",     onClick);
       window.removeEventListener("scroll",    onScroll);
-      cancelAnimationFrame(rafRef.current);
     };
   }, []);
 

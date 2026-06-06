@@ -55,7 +55,7 @@ export const projects = [
     featured: false,
     order: 5,
     image: "/images/erp.png",
-    liveUrl: "",
+    liveUrl: "https://helaly-erp.vercel.app",
   },
   {
     slug: "sportix-smis",
