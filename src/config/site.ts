@@ -79,6 +79,6 @@ export const projects = [
     featured: true,
     order: 3,
     image: "/images/robotics.png",
-    liveUrl: "https://uss-ur5e-crew-operations.vercel.app",
+    liveUrl: "",
   },
 ] as const;

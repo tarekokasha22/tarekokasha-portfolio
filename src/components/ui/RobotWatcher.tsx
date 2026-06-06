@@ -62,8 +62,11 @@ export function RobotWatcher() {
     };
   }, []);
 
-  // RAF animation loop
+  // RAF animation loop — only runs while awake (mouse recently moved).
+  // On first load the robot is idle, so nothing competes with hydration.
   useEffect(() => {
+    if (!isAwake) return;
+
     const animate = () => {
       const r = rendered.current;
       const t = target.current;
@@ -107,7 +110,7 @@ export function RobotWatcher() {
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, []);
+  }, [isAwake]);
 
   const stroke = "rgba(244,239,230,0.55)";
   const strokeDim = "rgba(244,239,230,0.25)";

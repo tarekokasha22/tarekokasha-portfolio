@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, useMotionValue, useSpring } from "motion/react";
 
 type CursorMode = "default" | "hover" | "project";
@@ -28,9 +28,6 @@ export function CustomCursor() {
   const tx = useSpring(mouseX, trailSpring);
   const ty = useSpring(mouseY, trailSpring);
 
-  // Debounce MutationObserver re-attachment
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   useEffect(() => {
     const move = (e: MouseEvent) => {
       mouseX.set(e.clientX);
@@ -40,40 +37,31 @@ export function CustomCursor() {
       if (!visible) setVisible(true);
     };
 
-    const onEnter = (e: Event) => {
-      const el = e.currentTarget as HTMLElement;
-      setMode(el.dataset.cursor === "project" ? "project" : "hover");
+    // Event delegation — one listener on the document instead of a
+    // MutationObserver + per-element listeners. Zero hydration churn, and
+    // it works automatically for links injected by client navigation.
+    const over = (e: MouseEvent) => {
+      const el = (e.target as HTMLElement | null)?.closest<HTMLElement>(
+        "a, button, [data-cursor]"
+      );
+      if (el) setMode(el.dataset.cursor === "project" ? "project" : "hover");
     };
-    const onLeave = () => setMode("default");
-
-    const attach = () => {
-      document.querySelectorAll("a, button, [data-cursor]").forEach((el) => {
-        el.removeEventListener("mouseenter", onEnter);
-        el.removeEventListener("mouseleave", onLeave);
-        el.addEventListener("mouseenter", onEnter);
-        el.addEventListener("mouseleave", onLeave);
-      });
+    const out = (e: MouseEvent) => {
+      const el = (e.target as HTMLElement | null)?.closest("a, button, [data-cursor]");
+      const next = (e.relatedTarget as HTMLElement | null)?.closest(
+        "a, button, [data-cursor]"
+      );
+      if (el && !next) setMode("default");
     };
-
-    attach();
-
-    // Re-attach when DOM changes (navigation injects new links)
-    const observer = new MutationObserver(() => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(attach, 120);
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
 
     window.addEventListener("mousemove", move, { passive: true });
+    document.addEventListener("mouseover", over, { passive: true });
+    document.addEventListener("mouseout", out, { passive: true });
 
     return () => {
       window.removeEventListener("mousemove", move);
-      observer.disconnect();
-      if (timerRef.current) clearTimeout(timerRef.current);
-      document.querySelectorAll("a, button, [data-cursor]").forEach((el) => {
-        el.removeEventListener("mouseenter", onEnter);
-        el.removeEventListener("mouseleave", onLeave);
-      });
+      document.removeEventListener("mouseover", over);
+      document.removeEventListener("mouseout", out);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
