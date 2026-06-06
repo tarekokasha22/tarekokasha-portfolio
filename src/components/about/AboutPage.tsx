@@ -163,10 +163,13 @@ export function AboutPage() {
                     lineHeight: 1.75,
                   }}
                 >
-                  I came up through engineering school in Cairo, but I learned the most from the
-                  things I built on the side. The first was an auction-pricing model for a friend who
-                  flipped electronics — it made him money and taught me that a system is only as good
-                  as the messy reality it has to survive. Most projects since have had the same shape.
+                  I studied Robotics and Automation Engineering at the German International University.
+                  The degree gave me the foundations — control systems, embedded hardware, sensor
+                  fusion. The real education came from the things I built while still a student:
+                  starting with an auction-pricing model for a friend who resold electronics, a system
+                  that taught me more about production constraints in one month than a semester of
+                  coursework. Most projects since have had the same shape: a real constraint, limited
+                  resources, and a hard requirement that it actually works.
                 </p>
                 <p
                   style={{
@@ -176,11 +179,11 @@ export function AboutPage() {
                     lineHeight: 1.75,
                   }}
                 >
-                  Since then I've shipped robotics work, internal tools for small businesses, and a
-                  string of paid software projects — the first at 20. I went independent because
-                  building for real clients beat every job I could see waiting on the other side of
-                  graduation. Watching something you built go live, with real people depending on it,
-                  is a kind of feedback an office never gives you.
+                  Alongside the robotics work, I was shipping paid software projects — the first at 20.
+                  I went independent before graduating because the client work was already more
+                  demanding and more interesting than any job I could see ahead of me. Seeing something
+                  you built running in a real business, with real people depending on it, is a kind of
+                  feedback that sharpens your judgment faster than anything else.
                 </p>
                 <p
                   style={{
@@ -190,9 +193,9 @@ export function AboutPage() {
                     lineHeight: 1.75,
                   }}
                 >
-                  I'm 22, based in Cairo, and I work remotely with clients across the Gulf, Egypt, and
-                  beyond. Almost all of them came by referral — the only measure of client satisfaction
-                  I've ever fully trusted.
+                  I'm 22. I work with clients across the Gulf, Egypt, and globally. Almost all of them
+                  came through referral — which, in my experience, is the only honest measure of
+                  whether the work was actually good.
                 </p>
               </div>
             </div>
