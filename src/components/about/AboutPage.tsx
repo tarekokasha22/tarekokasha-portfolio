@@ -3,8 +3,10 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRef } from "react";
-import { motion, useInView, AnimatePresence } from "motion/react";
+import { motion, useInView } from "motion/react";
 import { siteConfig } from "@/config/site";
+import { Reticle } from "@/components/ui/Reticle";
+import { SpaceBackground } from "@/components/ui/SpaceBackground";
 
 const principles = [
   {
@@ -125,9 +127,9 @@ export function AboutPage() {
                   }}
                 >
                   I'm an engineer based in Cairo, working with founders and operators around the world
-                  on AI systems, automations, and custom internal software. I take on a small number
-                  of projects each year and build them like real software — with tests, observability,
-                  and a written architecture I'd hand to my successor.
+                  on AI systems, automations, custom internal software, and robotics. I take on a small
+                  number of projects each year and build them like real software — with tests,
+                  observability, and a written architecture I'd hand to my successor.
                 </p>
                 <p
                   style={{
@@ -148,7 +150,7 @@ export function AboutPage() {
           </div>
         </div>
 
-        {/* Currently working on */}
+        {/* Robotics showcase */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={heroInView ? { opacity: 1, y: 0 } : {}}
@@ -157,44 +159,113 @@ export function AboutPage() {
         >
           <div className="grid md:grid-cols-12 gap-8">
             <div className="md:col-span-3">
-              <p className="eyebrow">Currently</p>
+              <p className="eyebrow">Robotics</p>
             </div>
             <div className="md:col-span-9">
               <div
-                className="p-6 border border-rule relative"
-                style={{ background: "rgba(244,239,230,0.02)" }}
+                className="robotics-panel relative overflow-hidden p-8 md:p-12"
+                style={{ minHeight: 320 }}
               >
-                <div className="flex items-start gap-3 mb-4">
-                  <span
-                    className="inline-block w-1.5 h-1.5 rounded-full mt-2 shrink-0"
-                    style={{ background: "#4CAF50", boxShadow: "0 0 6px #4CAF50" }}
-                  />
-                  <p
-                    className="text-xs eyebrow"
-                    style={{ color: "var(--color-accent)", paddingTop: "2px" }}
-                  >
-                    May 2026 — Active
-                  </p>
+                {/* Moving star field */}
+                <div className="absolute inset-0 opacity-60 pointer-events-none">
+                  <SpaceBackground />
                 </div>
-                <p
+                {/* Readability scrim */}
+                <div
+                  className="absolute inset-0 pointer-events-none"
                   style={{
-                    fontFamily: "var(--font-sans)",
-                    fontSize: "1.0625rem",
-                    color: "var(--color-muted)",
-                    lineHeight: 1.75,
+                    background:
+                      "linear-gradient(90deg, rgba(11,11,12,0.72), rgba(11,11,12,0.34) 65%, transparent)",
                   }}
-                >
-                  Right now (May 2026), I'm expanding the automation stack for an enterprise ops client,
-                  finishing a client dashboard for a wholesale brand in the Gulf, and experimenting with
-                  agentic systems that handle multi-step internal processes without human checkpoints.
-                  Also reading more about information retrieval than any reasonable person should.
-                </p>
-                <p
-                  className="mt-4 text-xs"
-                  style={{ fontFamily: "var(--font-sans)", color: "var(--color-muted)" }}
-                >
-                  Last updated: May 16, 2026.
-                </p>
+                />
+
+                <div className="relative z-10 grid md:grid-cols-12 gap-8 md:gap-10 items-center">
+                  {/* Animated reticle */}
+                  <div className="md:col-span-4 flex justify-center md:justify-start">
+                    <Reticle size={156} active={heroInView} />
+                  </div>
+
+                  {/* Copy */}
+                  <div className="md:col-span-8">
+                    <p className="eyebrow mb-4" style={{ color: "var(--color-accent)" }}>
+                      The engineering underneath
+                    </p>
+                    <h3
+                      className="text-cream mb-5"
+                      style={{
+                        fontFamily: "var(--font-display)",
+                        fontSize: "clamp(1.5rem, 2.6vw, 2.1rem)",
+                        fontWeight: 400,
+                        letterSpacing: "-0.02em",
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      Robotics &amp; computer vision.
+                    </h3>
+                    <p
+                      className="mb-6"
+                      style={{
+                        fontFamily: "var(--font-sans)",
+                        fontSize: "1rem",
+                        color: "var(--color-muted)",
+                        lineHeight: 1.75,
+                        maxWidth: "52ch",
+                      }}
+                    >
+                      Before the software, the hardware. At the German International University
+                      I built the USS UR5e — a 6-axis robotic arm that picks, sorts, and places
+                      objects autonomously with computer vision, and takes voice commands through
+                      Alexa and AWS. Sensors, control loops, real-time constraints: that
+                      systems-level instinct is what I bring to every AI and software build.
+                    </p>
+
+                    {/* Live telemetry */}
+                    <div className="flex flex-wrap gap-x-6 gap-y-3 mb-6">
+                      {[
+                        "6-axis articulation",
+                        "Vision-guided pick & place",
+                        "Voice control · Alexa + AWS",
+                        "Real-time control loops",
+                      ].map((spec) => (
+                        <span
+                          key={spec}
+                          className="inline-flex items-center gap-2 text-xs"
+                          style={{
+                            fontFamily: "var(--font-sans)",
+                            color: "var(--color-muted)",
+                            letterSpacing: "0.08em",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          <span
+                            className="avail-dot inline-block w-1.5 h-1.5 rounded-full shrink-0"
+                            style={{ background: "var(--color-accent)" }}
+                          />
+                          {spec}
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* Tags */}
+                    <div className="flex flex-wrap gap-2">
+                      {["ROS", "Computer Vision", "OpenCV", "UR5e", "Embedded C", "Sensor Fusion"].map(
+                        (tag) => (
+                          <span
+                            key={tag}
+                            className="text-xs px-2.5 py-1"
+                            style={{
+                              fontFamily: "var(--font-sans)",
+                              color: "var(--color-muted)",
+                              border: "1px solid var(--color-rule)",
+                            }}
+                          >
+                            {tag}
+                          </span>
+                        )
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

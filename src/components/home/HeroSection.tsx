@@ -67,8 +67,8 @@ export function HeroSection() {
               animation: "heroFadeUp 0.9s 0.75s cubic-bezier(0.16,1,0.3,1) both",
             }}
           >
-            AI systems and custom internal tools for founders who need them
-            working in weeks, not pitch decks in months.
+            AI systems, custom internal tools, and robotics-grade engineering
+            for founders who need them working in weeks, not pitch decks in months.
           </p>
 
           <div
