@@ -11,30 +11,34 @@ import {
 } from "motion/react";
 
 /* ──────────────────────────────────────────────────────────────────
-   A UR5e-style arm performing a pick-and-place, scrubbed by scroll.
-   The section pins (sticky) and the routine plays from 0 → 1 as you
-   scroll through it, then releases the page. Forward kinematics is done
-   with nested SVG groups: each joint sits at the local origin (0,0) of a
-   translated <g>, and a <motion.g transform="rotate(θ)"> spins around it.
+   UR5e pick-and-place — scroll-scrubbed, rail-mounted.
+
+   The arm base MOVES along a horizontal track: it slides left to the
+   PICK platform, grips the payload, sweeps all the way right to PLACE
+   it, then returns to home. Joint angles fold the arm DOWN at each end
+   so the gripper visibly touches the platform before picking/placing.
+
+   Forward kinematics: nested SVG <g translate> + <motion.g rotate>.
+   Each joint sits at local (0,0) of a translated group, so rotate()
+   spins around the joint centre without transform-origin hacks.
    ────────────────────────────────────────────────────────────────── */
 
-const stroke = "rgba(244,239,230,0.6)";
-const strokeDim = "rgba(244,239,230,0.22)";
-const accent = "#C9A961";
+const stroke     = "rgba(244,239,230,0.6)";
+const strokeDim  = "rgba(244,239,230,0.22)";
+const accent     = "#C9A961";
 
-// Joint-link segment with a rounded casing + center seam
+const PICK_X  = 162;   // x-centre of the pick platform
+const PLACE_X = 478;   // x-centre of the place platform
+const BASE_Y  = 400;   // normal carriage y (work surface level)
+
 function Link({ length, width = 18 }: { length: number; width?: number }) {
   return (
     <g>
       <rect
-        x={-width / 2}
-        y={-length}
-        width={width}
-        height={length + width / 2}
+        x={-width / 2} y={-length}
+        width={width}  height={length + width / 2}
         rx={width / 2}
-        fill="rgba(18,18,22,0.9)"
-        stroke={stroke}
-        strokeWidth={1.5}
+        fill="rgba(18,18,22,0.9)" stroke={stroke} strokeWidth={1.5}
       />
       <line x1={0} y1={-length + 6} x2={0} y2={-6} stroke={strokeDim} strokeWidth={1} />
     </g>
@@ -44,8 +48,8 @@ function Link({ length, width = 18 }: { length: number; width?: number }) {
 function Joint({ r = 9 }: { r?: number }) {
   return (
     <>
-      <circle cx={0} cy={0} r={r} fill="rgba(13,13,16,0.95)" stroke={stroke} strokeWidth={1.5} />
-      <circle cx={0} cy={0} r={r * 0.42} fill="none" stroke={accent} strokeWidth={1.2} />
+      <circle cx={0} cy={0} r={r}           fill="rgba(13,13,16,0.95)" stroke={stroke} strokeWidth={1.5} />
+      <circle cx={0} cy={0} r={r * 0.42}    fill="none"                stroke={accent} strokeWidth={1.2} />
     </>
   );
 }
@@ -69,45 +73,74 @@ export function RoboticArmScene() {
     offset: ["start start", "end end"],
   });
 
-  // Always-on idle clock — the arm breathes even when you stop scrolling, so
-  // it reads as a live machine rather than a frozen diagram.
+  // Always-on idle clock so the arm is never frozen mid-scroll-stop
   const time = useTime();
 
-  // Keyframe breakpoints across the scrubbed routine
-  const P = [0, 0.18, 0.32, 0.5, 0.68, 0.82, 1];
+  /* ────────────────────────────────────────────────────
+     Keyframe timeline
+     p=0    : home centre (320)
+     p=0.15 : sliding toward pick  (~230)
+     p=0.30 : at pick  (162) — arm folds DOWN to platform
+     p=0.50 : in transit, crossing stage  (~320)
+     p=0.70 : at place (478) — arm folds DOWN to platform
+     p=0.85 : sliding back (~500)
+     p=1.0  : home centre (320)
+  ──────────────────────────────────────────────────── */
+  const P = [0, 0.15, 0.30, 0.50, 0.70, 0.85, 1.0];
 
-  // Joint angles (degrees, clockwise). Shoulder swings the arm; elbow bends
-  // the forearm; wrist keeps the gripper oriented at the work surface.
-  const a1 = useTransform(scrollYProgress, P, [-20, -36, -36, -6, 26, 34, 14]);
-  const a2 = useTransform(scrollYProgress, P, [52, 80, 80, 36, 50, 82, 58]);
-  const a3 = useTransform(scrollYProgress, P, [-28, -44, -44, -22, -32, -46, -34]);
+  // ── Rail carriage X: the whole arm translates left then right ──
+  const bxRaw = useTransform(scrollYProgress, P, [320, 230, PICK_X, 320, PLACE_X, 500, 320]);
+  // Tiny mechanical tremor on top (idle)
+  const bx    = useTransform(() => bxRaw.get() + Math.sin(time.get() / 820) * 1.5 * idleRef.current);
 
-  // Scroll-driven angle + a small continuous idle oscillation. The amplitudes
-  // stay low so the scrubbed routine still reads clearly.
-  const a1c = useTransform(() => a1.get() + Math.sin(time.get() / 900) * 2.2 * idleRef.current);
-  const a2c = useTransform(() => a2.get() + Math.sin(time.get() / 680 + 1.1) * 2.8 * idleRef.current);
-  const a3c = useTransform(() => a3.get() + Math.sin(time.get() / 1120 + 2.3) * 2.0 * idleRef.current);
+  // ── Carriage Y: dips down at pick/place so the arm reaches the platform ──
+  const by = useTransform(scrollYProgress, P, [BASE_Y, BASE_Y + 4, BASE_Y + 10, BASE_Y, BASE_Y + 10, BASE_Y + 4, BASE_Y]);
+
+  // Combined base position for the arm group
+  const baseT = useMotionTemplate`translate(${bx} ${by})`;
+
+  /* ────────────────────────────────────────────────────
+     Joint angles  (degrees, clockwise from vertical)
+
+     At GRIP / PLACE the elbow folds to ~160° — nearly
+     doubled back — which brings the wrist DOWN close to
+     the platform even though the base is floor-level.
+     The shoulder swings ±22° to offset toward each
+     platform x.  Wrist rotates ≈70° at grip to angle
+     the fingers toward the payload.
+  ──────────────────────────────────────────────────── */
+  const a1 = useTransform(scrollYProgress, P, [-10, -18, -22,  0,  22,  18,  10]);
+  const a2 = useTransform(scrollYProgress, P, [ 52, 115, 160, 44, 160, 115,  52]);
+  const a3 = useTransform(scrollYProgress, P, [-26, -48,  70,-18,  -70,  48,  26]);
+
+  // Layer idle breath on top — low amplitude so scrub still reads clearly
+  const a1c = useTransform(() => a1.get() + Math.sin(time.get() / 900)       * 2.0 * idleRef.current);
+  const a2c = useTransform(() => a2.get() + Math.sin(time.get() / 680 + 1.1) * 2.6 * idleRef.current);
+  const a3c = useTransform(() => a3.get() + Math.sin(time.get() / 1100 + 2.3)* 1.8 * idleRef.current);
 
   const j1 = useMotionTemplate`rotate(${a1c})`;
   const j2 = useMotionTemplate`rotate(${a2c})`;
   const j3 = useMotionTemplate`rotate(${a3c})`;
 
-  // Gripper open(0) → closed(1)
-  const close = useTransform(scrollYProgress, [0, 0.28, 0.34, 0.8, 0.9, 1], [0, 0, 1, 1, 0, 0]);
+  // ── Gripper: open → close → carry → open ──
+  const close     = useTransform(scrollYProgress, [0, 0.27, 0.33, 0.78, 0.88, 1], [0, 0, 1, 1, 0, 0]);
   const fingerPos = useTransform(close, [0, 1], [13, 5]);
   const fingerNeg = useTransform(close, [0, 1], [-13, -5]);
-  const fingerLT = useMotionTemplate`translate(${fingerNeg} 0)`;
-  const fingerRT = useMotionTemplate`translate(${fingerPos} 0)`;
+  const fingerLT  = useMotionTemplate`translate(${fingerNeg} 0)`;
+  const fingerRT  = useMotionTemplate`translate(${fingerPos} 0)`;
 
-  // Payload hand-off: object on the left platform → carried → right platform
-  const leftOp = useTransform(scrollYProgress, [0, 0.3, 0.34], [1, 1, 0]);
-  const heldOp = useTransform(scrollYProgress, [0, 0.3, 0.34, 0.82, 0.9], [0, 0, 1, 1, 0]);
-  const rightOp = useTransform(scrollYProgress, [0, 0.86, 0.92], [0, 0, 1]);
+  // ── Payload hand-off ──
+  // left platform object vanishes when gripper closes
+  const leftOp  = useTransform(scrollYProgress, [0, 0.30, 0.35], [1, 1, 0]);
+  // held by gripper — travels with the arm
+  const heldOp  = useTransform(scrollYProgress, [0, 0.30, 0.35, 0.80, 0.90], [0, 0, 1, 1, 0]);
+  // right platform object fades in after gripper releases
+  const rightOp = useTransform(scrollYProgress, [0, 0.85, 0.93], [0, 0, 1]);
 
-  // Progress bar width + a coarse stage label (≤5 re-renders, not per-frame)
   const barW = useTransform(scrollYProgress, [0, 1], ["0%", "100%"]);
+
   useMotionValueEvent(scrollYProgress, "change", (p) => {
-    const next = p < 0.18 ? 0 : p < 0.34 ? 1 : p < 0.68 ? 2 : p < 0.86 ? 3 : 4;
+    const next = p < 0.18 ? 0 : p < 0.36 ? 1 : p < 0.66 ? 2 : p < 0.88 ? 3 : 4;
     setStage((cur) => (cur === next ? cur : next));
   });
 
@@ -116,24 +149,20 @@ export function RoboticArmScene() {
       ref={sectionRef}
       className="relative border-t border-rule"
       style={{ height: reduced ? "auto" : "300vh" }}
-      aria-label="Interactive robotics demonstration: a robotic arm performing a scroll-driven pick-and-place routine."
+      aria-label="Interactive robotics: a rail-mounted arm performing a scroll-driven pick-and-place routine."
     >
       <div
         className={reduced ? "relative" : "sticky top-0"}
         style={{ height: reduced ? "auto" : "100vh", overflow: "hidden" }}
       >
-        {/* Blueprint grid wash */}
-        <div
-          aria-hidden
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(201,169,97,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(201,169,97,0.05) 1px, transparent 1px)",
-            backgroundSize: "44px 44px",
-            maskImage: "radial-gradient(ellipse 70% 60% at 50% 55%, #000 30%, transparent 80%)",
-            WebkitMaskImage: "radial-gradient(ellipse 70% 60% at 50% 55%, #000 30%, transparent 80%)",
-          }}
-        />
+        {/* Blueprint grid */}
+        <div aria-hidden className="absolute inset-0 pointer-events-none" style={{
+          backgroundImage:
+            "linear-gradient(rgba(201,169,97,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(201,169,97,0.05) 1px, transparent 1px)",
+          backgroundSize: "44px 44px",
+          maskImage: "radial-gradient(ellipse 70% 60% at 50% 55%, #000 30%, transparent 80%)",
+          WebkitMaskImage: "radial-gradient(ellipse 70% 60% at 50% 55%, #000 30%, transparent 80%)",
+        }} />
 
         {/* Header */}
         <div className="container relative z-10 pt-20 md:pt-24">
@@ -142,32 +171,21 @@ export function RoboticArmScene() {
               <p className="eyebrow">Live routine</p>
             </div>
             <div className="md:col-span-9 max-w-2xl">
-              <h2
-                className="text-cream"
-                style={{
-                  fontFamily: "var(--font-display)",
-                  fontSize: "clamp(1.6rem, 3vw, 2.4rem)",
-                  fontWeight: 400,
-                  letterSpacing: "-0.02em",
-                  lineHeight: 1.2,
-                }}
-              >
+              <h2 className="text-cream" style={{
+                fontFamily: "var(--font-display)",
+                fontSize: "clamp(1.6rem, 3vw, 2.4rem)",
+                fontWeight: 400, letterSpacing: "-0.02em", lineHeight: 1.2,
+              }}>
                 A pick-and-place,{" "}
-                <span style={{ color: "var(--color-muted)", fontStyle: "italic" }}>
-                  scrubbed by your scroll.
-                </span>
+                <span style={{ color: "var(--color-muted)", fontStyle: "italic" }}>scrubbed by your scroll.</span>
               </h2>
-              <p
-                className="mt-4"
-                style={{
-                  fontFamily: "var(--font-sans)",
-                  fontSize: "0.95rem",
-                  color: "var(--color-muted)",
-                  lineHeight: 1.6,
-                }}
-              >
-                The same motion logic behind my UR5e robotics work — keep
-                scrolling to run the routine end to end.
+              <p className="mt-4" style={{
+                fontFamily: "var(--font-sans)", fontSize: "0.95rem",
+                color: "var(--color-muted)", lineHeight: 1.6,
+              }}>
+                The arm slides on its rail, reaches down to grip, sweeps
+                across, and places — the same motion logic behind my UR5e
+                robotics work. Keep scrolling to run it end to end.
               </p>
             </div>
           </div>
@@ -176,104 +194,120 @@ export function RoboticArmScene() {
         {/* Stage */}
         <div className="absolute inset-0 flex items-center justify-center px-6">
           <div className="relative w-full" style={{ maxWidth: 760 }}>
-            {/* Corner brackets — echoes the cursor reticle */}
-            {(["tl", "tr", "bl", "br"] as const).map((c) => (
-              <span
-                key={c}
-                aria-hidden
-                className="absolute w-6 h-6 pointer-events-none"
-                style={{
-                  top: c[0] === "t" ? 0 : undefined,
-                  bottom: c[0] === "b" ? 0 : undefined,
-                  left: c[1] === "l" ? 0 : undefined,
-                  right: c[1] === "r" ? 0 : undefined,
-                  borderTop: c[0] === "t" ? `1px solid rgba(201,169,97,0.4)` : undefined,
-                  borderBottom: c[0] === "b" ? `1px solid rgba(201,169,97,0.4)` : undefined,
-                  borderLeft: c[1] === "l" ? `1px solid rgba(201,169,97,0.4)` : undefined,
-                  borderRight: c[1] === "r" ? `1px solid rgba(201,169,97,0.4)` : undefined,
-                }}
-              />
+            {/* Corner brackets */}
+            {(["tl","tr","bl","br"] as const).map((c) => (
+              <span key={c} aria-hidden className="absolute w-6 h-6 pointer-events-none" style={{
+                top:    c[0]==="t" ? 0 : undefined, bottom: c[0]==="b" ? 0 : undefined,
+                left:   c[1]==="l" ? 0 : undefined, right:  c[1]==="r" ? 0 : undefined,
+                borderTop:    c[0]==="t" ? `1px solid rgba(201,169,97,0.4)` : undefined,
+                borderBottom: c[0]==="b" ? `1px solid rgba(201,169,97,0.4)` : undefined,
+                borderLeft:   c[1]==="l" ? `1px solid rgba(201,169,97,0.4)` : undefined,
+                borderRight:  c[1]==="r" ? `1px solid rgba(201,169,97,0.4)` : undefined,
+              }} />
             ))}
 
             {/* Horizontal scanner sweep */}
             {!reduced && (
-              <div
-                aria-hidden
-                className="absolute top-0 bottom-0 pointer-events-none"
-                style={{
-                  width: 2,
-                  background: "linear-gradient(to bottom, transparent, rgba(201,169,97,0.5), transparent)",
-                  animation: "armScanSweep 6s ease-in-out infinite",
-                }}
-              />
+              <div aria-hidden className="absolute top-0 bottom-0 pointer-events-none" style={{
+                width: 2,
+                background: "linear-gradient(to bottom, transparent, rgba(201,169,97,0.5), transparent)",
+                animation: "armScanSweep 6s ease-in-out infinite",
+              }} />
             )}
 
             <svg viewBox="0 0 640 460" width="100%" height="100%" fill="none" style={{ display: "block" }}>
-              {/* Work surface */}
-              <line x1="70" y1="392" x2="570" y2="392" stroke={strokeDim} strokeWidth="1.5" />
-              {Array.from({ length: 11 }).map((_, i) => (
-                <line
-                  key={i}
-                  x1={80 + i * 48}
-                  y1="392"
-                  x2={70 + i * 48}
-                  y2="402"
-                  stroke={strokeDim}
-                  strokeWidth="1"
-                />
+
+              {/* ── Rail track ── */}
+              {/* Channel body */}
+              <rect x="72" y={BASE_Y + 2} width="496" height="16" rx="3"
+                fill="rgba(16,16,20,0.85)" stroke={strokeDim} strokeWidth="1.2" />
+              {/* Rail top surface */}
+              <line x1="80" y1={BASE_Y + 4} x2="560" y2={BASE_Y + 4} stroke={stroke} strokeWidth="1" />
+              {/* Segmentation ticks */}
+              {Array.from({ length: 25 }).map((_, i) => (
+                <line key={i}
+                  x1={80 + i * 20} y1={BASE_Y + 2}
+                  x2={80 + i * 20} y2={BASE_Y + 18}
+                  stroke={strokeDim} strokeWidth="0.8" />
               ))}
+              {/* End stops */}
+              <rect x="68" y={BASE_Y - 2} width="8" height="22" rx="2"
+                fill="rgba(18,18,22,0.95)" stroke={stroke} strokeWidth="1.2" />
+              <rect x="564" y={BASE_Y - 2} width="8" height="22" rx="2"
+                fill="rgba(18,18,22,0.95)" stroke={stroke} strokeWidth="1.2" />
 
-              {/* Pick platform (left) + place platform (right) */}
-              <rect x="96" y="372" width="74" height="10" rx="2" stroke={stroke} strokeWidth="1.2" />
-              <rect x="470" y="372" width="74" height="10" rx="2" stroke={stroke} strokeWidth="1.2" />
-              <text x="133" y="420" textAnchor="middle" fill={strokeDim} fontSize="10" fontFamily="var(--font-sans)" letterSpacing="2">PICK</text>
-              <text x="507" y="420" textAnchor="middle" fill={strokeDim} fontSize="10" fontFamily="var(--font-sans)" letterSpacing="2">PLACE</text>
+              {/* Work surface hairline above the rail */}
+              <line x1="70" y1={BASE_Y} x2="570" y2={BASE_Y} stroke={strokeDim} strokeWidth="1" />
 
-              {/* Static payloads on the platforms */}
+              {/* ── PICK platform ── */}
+              <rect x={PICK_X - 38} y={BASE_Y - 22} width="76" height="12" rx="2"
+                fill="rgba(16,16,20,0.6)" stroke={stroke} strokeWidth="1.2" />
+              <text x={PICK_X} y={BASE_Y + 32} textAnchor="middle"
+                fill={strokeDim} fontSize="10" fontFamily="var(--font-sans)" letterSpacing="2">PICK</text>
+
+              {/* ── PLACE platform ── */}
+              <rect x={PLACE_X - 38} y={BASE_Y - 22} width="76" height="12" rx="2"
+                fill="rgba(16,16,20,0.6)" stroke={stroke} strokeWidth="1.2" />
+              <text x={PLACE_X} y={BASE_Y + 32} textAnchor="middle"
+                fill={strokeDim} fontSize="10" fontFamily="var(--font-sans)" letterSpacing="2">PLACE</text>
+
+              {/* ── Static payloads ── */}
               <motion.g style={{ opacity: leftOp }}>
-                <rect x="120" y="350" width="26" height="22" rx="3" fill="rgba(201,169,97,0.16)" stroke={accent} strokeWidth="1.3" />
+                <rect x={PICK_X - 13}  y={BASE_Y - 44} width="26" height="22" rx="3"
+                  fill="rgba(201,169,97,0.16)" stroke={accent} strokeWidth="1.3" />
               </motion.g>
               <motion.g style={{ opacity: rightOp }}>
-                <rect x="494" y="350" width="26" height="22" rx="3" fill="rgba(201,169,97,0.16)" stroke={accent} strokeWidth="1.3" />
+                <rect x={PLACE_X - 13} y={BASE_Y - 44} width="26" height="22" rx="3"
+                  fill="rgba(201,169,97,0.16)" stroke={accent} strokeWidth="1.3" />
               </motion.g>
 
-              {/* ── Robot base ── */}
-              <g transform="translate(320,392)">
-                <rect x="-46" y="0" width="92" height="20" rx="4" fill="rgba(18,18,22,0.95)" stroke={stroke} strokeWidth="1.5" />
-                <rect x="-22" y="-16" width="44" height="18" rx="4" fill="rgba(13,13,16,0.95)" stroke={stroke} strokeWidth="1.5" />
-                <circle cx="0" cy="14" r="2" fill={accent} style={{ filter: `drop-shadow(0 0 4px ${accent})` }} />
+              {/* ── Arm assembly: carriage rides on the rail ── */}
+              <motion.g transform={baseT}>
+                {/* Carriage housing */}
+                <rect x="-30" y="-2" width="60" height="18" rx="3"
+                  fill="rgba(13,13,16,0.96)" stroke={stroke} strokeWidth="1.5" />
+                <rect x="-16" y="-14" width="32" height="16" rx="3"
+                  fill="rgba(18,18,22,0.95)" stroke={stroke} strokeWidth="1.3" />
+                {/* Status LED */}
+                <circle cx="0" cy="7" r="2.2" fill={accent}
+                  style={{ filter: `drop-shadow(0 0 4px ${accent})` }} />
 
-                {/* Shoulder joint */}
+                {/* ── Shoulder joint ── */}
                 <g transform="translate(0,-12)">
                   <motion.g transform={j1}>
                     <Link length={132} width={20} />
                     <Joint r={11} />
 
-                    {/* Elbow */}
+                    {/* ── Elbow ── */}
                     <g transform="translate(0,-132)">
                       <motion.g transform={j2}>
                         <Link length={118} width={16} />
                         <Joint r={9} />
 
-                        {/* Wrist */}
+                        {/* ── Wrist ── */}
                         <g transform="translate(0,-118)">
                           <motion.g transform={j3}>
                             <Joint r={7} />
                             {/* Wrist plate */}
-                            <rect x="-12" y="-30" width="24" height="26" rx="4" fill="rgba(18,18,22,0.95)" stroke={stroke} strokeWidth="1.4" />
-                            <circle cx="0" cy="-34" r="2.4" fill={accent} style={{ filter: `drop-shadow(0 0 4px ${accent})` }} />
+                            <rect x="-12" y="-30" width="24" height="26" rx="4"
+                              fill="rgba(18,18,22,0.95)" stroke={stroke} strokeWidth="1.4" />
+                            <circle cx="0" cy="-34" r="2.4" fill={accent}
+                              style={{ filter: `drop-shadow(0 0 4px ${accent})` }} />
 
-                            {/* Gripper fingers (open/close along x) */}
+                            {/* Gripper fingers */}
                             <motion.g transform={fingerLT}>
-                              <path d="M -3 -30 L -3 -50 L -8 -56" stroke={accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                              <path d="M -3 -30 L -3 -50 L -8 -56"
+                                stroke={accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
                             </motion.g>
                             <motion.g transform={fingerRT}>
-                              <path d="M 3 -30 L 3 -50 L 8 -56" stroke={accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                              <path d="M 3 -30 L 3 -50 L 8 -56"
+                                stroke={accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
                             </motion.g>
 
-                            {/* Carried payload — travels with the gripper */}
+                            {/* Carried payload — child of wrist, travels with it */}
                             <motion.g style={{ opacity: heldOp }}>
-                              <rect x="-13" y="-58" width="26" height="22" rx="3" fill="rgba(201,169,97,0.2)" stroke={accent} strokeWidth="1.3" />
+                              <rect x="-13" y="-58" width="26" height="22" rx="3"
+                                fill="rgba(201,169,97,0.2)" stroke={accent} strokeWidth="1.3" />
                             </motion.g>
                           </motion.g>
                         </g>
@@ -281,7 +315,8 @@ export function RoboticArmScene() {
                     </g>
                   </motion.g>
                 </g>
-              </g>
+              </motion.g>
+
             </svg>
           </div>
         </div>
@@ -290,45 +325,32 @@ export function RoboticArmScene() {
         <div className="absolute bottom-0 left-0 right-0 z-10 pb-10 md:pb-14">
           <div className="container flex items-end justify-between gap-6 flex-wrap">
             <div>
-              <p
-                className="text-xs tabular mb-2"
-                style={{ fontFamily: "var(--font-sans)", color: "var(--color-accent)", letterSpacing: "0.15em" }}
-              >
+              <p className="text-xs tabular mb-2"
+                style={{ fontFamily: "var(--font-sans)", color: "var(--color-accent)", letterSpacing: "0.15em" }}>
                 ROUTINE 01 · UR5e
               </p>
-              <p
-                className="text-cream"
-                style={{
-                  fontFamily: "var(--font-display)",
-                  fontSize: "clamp(1.5rem, 4vw, 2.25rem)",
-                  fontWeight: 300,
-                  letterSpacing: "0.04em",
-                }}
-              >
+              <p className="text-cream" style={{
+                fontFamily: "var(--font-display)",
+                fontSize: "clamp(1.5rem, 4vw, 2.25rem)",
+                fontWeight: 300, letterSpacing: "0.04em",
+              }}>
                 {String(stage + 1).padStart(2, "0")} / 05 · {STAGES[stage]}
               </p>
             </div>
-
             <div className="flex items-center gap-2">
               {STAGES.map((s, i) => (
-                <span
-                  key={s}
-                  className="text-[10px] px-2.5 py-1 border transition-colors duration-300"
+                <span key={s} className="text-[10px] px-2.5 py-1 border transition-colors duration-300"
                   style={{
-                    fontFamily: "var(--font-sans)",
-                    letterSpacing: "0.12em",
-                    color: i === stage ? "var(--color-ink)" : "var(--color-muted)",
-                    background: i === stage ? "var(--color-accent)" : "transparent",
-                    borderColor: i <= stage ? "var(--color-accent)" : "var(--color-rule)",
-                  }}
-                >
+                    fontFamily: "var(--font-sans)", letterSpacing: "0.12em",
+                    color:       i === stage ? "var(--color-ink)"    : "var(--color-muted)",
+                    background:  i === stage ? "var(--color-accent)" : "transparent",
+                    borderColor: i <= stage  ? "var(--color-accent)" : "var(--color-rule)",
+                  }}>
                   {s}
                 </span>
               ))}
             </div>
           </div>
-
-          {/* Progress track */}
           <div className="container mt-5">
             <div className="h-px w-full" style={{ background: "var(--color-rule)" }}>
               <motion.div className="h-px" style={{ width: barW, background: "var(--color-accent)" }} />
