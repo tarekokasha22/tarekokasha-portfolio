@@ -22,13 +22,49 @@ export function RobotWatcher() {
 
   const [isAwake, setIsAwake] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [excited, setExcited] = useState(false);
   const sleepTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const excitedTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const scanX = useRef(0);
   const waveT = useRef(0);
   // While a contextual message is showing, the robot must stay awake + waving
   const reactingRef = useRef(false);
+  const excitedRef = useRef(false);
+  const clickIdx = useRef(0);
 
   const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
+  // Playful lines the robot says when you poke it
+  const POKES = [
+    "You found me. I mostly watch.",
+    "Diagnostics: all systems nominal.",
+    "I run the boring parts so he doesn't.",
+    "Careful — I'm load-bearing.",
+    "Online since you got here.",
+    "Beep. Back to work.",
+  ];
+
+  const handlePoke = () => {
+    setIsAwake(true);
+    clearTimeout(sleepTimer.current);
+
+    const msg = POKES[clickIdx.current % POKES.length];
+    clickIdx.current += 1;
+    reactingRef.current = true;
+    excitedRef.current = true;
+    setMessage(msg);
+    setExcited(true);
+
+    clearTimeout(excitedTimer.current);
+    excitedTimer.current = setTimeout(() => {
+      excitedRef.current = false;
+      reactingRef.current = false;
+      setExcited(false);
+      setMessage(null);
+      clearTimeout(sleepTimer.current);
+      sleepTimer.current = setTimeout(() => setIsAwake(false), 4000);
+    }, 2600);
+  };
 
   // ── Contextual messages: any element with [data-robot="..."] speaks ──
   useEffect(() => {
@@ -98,6 +134,7 @@ export function RobotWatcher() {
     return () => {
       window.removeEventListener("mousemove", handleMouse);
       clearTimeout(sleepTimer.current);
+      clearTimeout(excitedTimer.current);
     };
   }, []);
 
@@ -129,13 +166,20 @@ export function RobotWatcher() {
         rightPupilRef.current.setAttribute("cy", String(45 + r.pupilY));
       }
       // Arms: shoulder pivots at (14,78) left and (58,78) right.
-      // When speaking, the right arm raises and waves — a friendly greeting.
+      // Hover → right arm waves. Poke (excited) → both arms throw up.
+      if (reactingRef.current || excitedRef.current) {
+        waveT.current += excitedRef.current ? 0.32 : 0.18;
+      }
       if (leftArmRef.current) {
-        leftArmRef.current.style.transform = `rotate(${-8 + r.armRot * 0.7}deg)`;
+        if (excitedRef.current) {
+          const wave = 118 - Math.sin(waveT.current) * 14;
+          leftArmRef.current.style.transform = `rotate(${wave}deg)`;
+        } else {
+          leftArmRef.current.style.transform = `rotate(${-8 + r.armRot * 0.7}deg)`;
+        }
       }
       if (rightArmRef.current) {
-        if (reactingRef.current) {
-          waveT.current += 0.18;
+        if (reactingRef.current || excitedRef.current) {
           const wave = -118 + Math.sin(waveT.current) * 14;
           rightArmRef.current.style.transform = `rotate(${wave}deg)`;
         } else {
@@ -247,7 +291,15 @@ export function RobotWatcher() {
         viewBox="0 0 72 120"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        style={{ animation: "robotBob 3.8s ease-in-out infinite", overflow: "visible" }}
+        onClick={handlePoke}
+        style={{
+          animation: excited
+            ? "robotExcited 0.6s ease-in-out"
+            : "robotBob 3.8s ease-in-out infinite",
+          overflow: "visible",
+          pointerEvents: "auto",
+          cursor: "none",
+        }}
       >
         {/* ── Antenna ── */}
         <line x1="36" y1="14" x2="36" y2="27" stroke={stroke} strokeWidth="1.5" strokeLinecap="round" />

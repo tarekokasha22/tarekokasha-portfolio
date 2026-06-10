@@ -16,7 +16,7 @@ export function CustomCursor() {
 
   // Reticle — medium lag
   const ringSpring  = { damping: 26, stiffness: 280, mass: 0.55 };
-  // Dot — snappy
+  // Crosshair core — snappy
   const dotSpring   = { damping: 50, stiffness: 600, mass: 0.2 };
   // Trail — very slow / ghostly
   const trailSpring = { damping: 18, stiffness: 90, mass: 1.0 };
@@ -68,16 +68,17 @@ export function CustomCursor() {
 
   if (!visible) return null;
 
-  const size      = mode === "project" ? 70 : mode === "hover" ? 50 : 34;
-  const trailSize = mode === "project" ? 92 : mode === "hover" ? 64 : 42;
+  const size      = mode === "project" ? 72 : mode === "hover" ? 52 : 36;
+  const trailSize = mode === "project" ? 96 : mode === "hover" ? 66 : 46;
+  const spin      = mode === "project" ? 6  : mode === "hover" ? 9  : 18;
 
-  // Robotic targeting reticle — four corner brackets + crosshair ticks
+  // HUD targeting reticle — always reads as a robotics/scanner cursor
   const bracket =
     mode === "project"
-      ? "rgba(201,169,97,0.9)"
+      ? "rgba(201,169,97,0.95)"
       : mode === "hover"
-      ? "rgba(244,239,230,0.72)"
-      : "rgba(244,239,230,0.42)";
+      ? "rgba(244,239,230,0.78)"
+      : "rgba(201,169,97,0.6)";
 
   return (
     <>
@@ -91,16 +92,16 @@ export function CustomCursor() {
         }}
       >
         <motion.div
-          animate={{ width: trailSize, height: trailSize, opacity: mode === "default" ? 0.08 : 0.06 }}
+          animate={{ width: trailSize, height: trailSize, opacity: mode === "default" ? 0.1 : 0.07 }}
           transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
           style={{
             borderRadius: "50%",
-            border: "1px solid rgba(201,169,97,0.35)",
+            border: "1px solid rgba(201,169,97,0.4)",
           }}
         />
       </motion.div>
 
-      {/* ── Targeting reticle ── */}
+      {/* ── Targeting reticle (rotating bracket cage) ── */}
       <motion.div
         style={{
           x: rx, y: ry,
@@ -109,34 +110,26 @@ export function CustomCursor() {
           pointerEvents: "none", zIndex: 9998,
         }}
       >
-        {/* Rotating bracket cage — scans while engaged, still at rest */}
         <motion.div
-          animate={{
-            width: size,
-            height: size,
-            rotate: mode === "default" ? 0 : 360,
-          }}
+          animate={{ width: size, height: size, rotate: 360 }}
           transition={{
             width:  { duration: 0.32, ease: [0.16, 1, 0.3, 1] },
             height: { duration: 0.32, ease: [0.16, 1, 0.3, 1] },
-            rotate:
-              mode === "default"
-                ? { duration: 0.4, ease: [0.16, 1, 0.3, 1] }
-                : { repeat: Infinity, ease: "linear", duration: mode === "project" ? 6 : 9 },
+            rotate: { repeat: Infinity, ease: "linear", duration: spin },
           }}
           style={{ position: "absolute", top: 0, left: 0, translateX: "-50%", translateY: "-50%" }}
         >
           <svg viewBox="0 0 100 100" width="100%" height="100%" fill="none" style={{ overflow: "visible" }}>
             {/* Corner brackets */}
-            <path d="M8 28 V8 H28"  stroke={bracket} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M72 8 H92 V28" stroke={bracket} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M8 28 V8 H28"   stroke={bracket} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M72 8 H92 V28"  stroke={bracket} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
             <path d="M92 72 V92 H72" stroke={bracket} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M28 92 H8 V72" stroke={bracket} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M28 92 H8 V72"  stroke={bracket} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
             {/* Crosshair edge ticks */}
-            <line x1="50" y1="2"  x2="50" y2="12" stroke={bracket} strokeWidth="2" strokeLinecap="round" opacity="0.7" />
-            <line x1="50" y1="88" x2="50" y2="98" stroke={bracket} strokeWidth="2" strokeLinecap="round" opacity="0.7" />
-            <line x1="2"  y1="50" x2="12" y2="50" stroke={bracket} strokeWidth="2" strokeLinecap="round" opacity="0.7" />
-            <line x1="88" y1="50" x2="98" y2="50" stroke={bracket} strokeWidth="2" strokeLinecap="round" opacity="0.7" />
+            <line x1="50" y1="1"  x2="50" y2="13" stroke={bracket} strokeWidth="2.5" strokeLinecap="round" opacity="0.8" />
+            <line x1="50" y1="87" x2="50" y2="99" stroke={bracket} strokeWidth="2.5" strokeLinecap="round" opacity="0.8" />
+            <line x1="1"  y1="50" x2="13" y2="50" stroke={bracket} strokeWidth="2.5" strokeLinecap="round" opacity="0.8" />
+            <line x1="87" y1="50" x2="99" y2="50" stroke={bracket} strokeWidth="2.5" strokeLinecap="round" opacity="0.8" />
           </svg>
         </motion.div>
 
@@ -159,7 +152,7 @@ export function CustomCursor() {
         </motion.span>
       </motion.div>
 
-      {/* ── Dot ── */}
+      {/* ── Center crosshair core ── */}
       <motion.div
         style={{
           x: dx, y: dy,
@@ -167,13 +160,21 @@ export function CustomCursor() {
           position: "fixed", top: 0, left: 0,
           pointerEvents: "none", zIndex: 9999,
         }}
-        animate={{ opacity: mode === "project" ? 0 : 1, scale: mode === "hover" ? 0.6 : 1 }}
-        transition={{ duration: 0.15 }}
+        animate={{ opacity: mode === "project" ? 0 : 1, scale: mode === "hover" ? 0.85 : 1 }}
+        transition={{ duration: 0.18 }}
       >
-        <div
-          className="w-1.5 h-1.5 rounded-full"
-          style={{ background: "var(--color-accent)" }}
-        />
+        <svg
+          width="20" height="20" viewBox="0 0 40 40" fill="none"
+          style={{ display: "block", transform: "translate(-50%, -50%)", position: "absolute", top: 0, left: 0 }}
+        >
+          {/* Crosshair plus with a center gap */}
+          <line x1="20" y1="4"  x2="20" y2="13" stroke="var(--color-accent)" strokeWidth="2" strokeLinecap="round" />
+          <line x1="20" y1="27" x2="20" y2="36" stroke="var(--color-accent)" strokeWidth="2" strokeLinecap="round" />
+          <line x1="4"  y1="20" x2="13" y2="20" stroke="var(--color-accent)" strokeWidth="2" strokeLinecap="round" />
+          <line x1="27" y1="20" x2="36" y2="20" stroke="var(--color-accent)" strokeWidth="2" strokeLinecap="round" />
+          {/* Center lock dot */}
+          <circle cx="20" cy="20" r="1.8" fill="var(--color-accent)" />
+        </svg>
       </motion.div>
     </>
   );
