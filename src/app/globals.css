@@ -361,6 +361,14 @@ body::before {
   40%           { opacity: 1;    }
 }
 
+/* Robotic arm scene — horizontal scanner sweep */
+@keyframes armScanSweep {
+  0%   { transform: translateX(-30%); opacity: 0;   }
+  10%  { opacity: 0.9; }
+  90%  { opacity: 0.9; }
+  100% { transform: translateX(130%); opacity: 0;   }
+}
+
 /* Click reaction — a little hop + wobble */
 @keyframes robotExcited {
   0%   { transform: translateY(0)     rotate(0deg);  }
