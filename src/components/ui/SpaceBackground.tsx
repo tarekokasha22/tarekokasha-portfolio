@@ -148,11 +148,11 @@ export function SpaceBackground() {
         { nx: 0.83, ny: 0.55, r: 0.24, r0: 74,  g0: 144, b0: 217, a: 0.040, driftX: -0.000012, driftY:  0.000008, phase: 1.4 },
       ];
 
-      // More frequent shooting stars (7) with staggered cooldowns
-      shootingRef.current = Array.from({ length: 7 }, (_, i) => ({
+      // Frequent shooting stars (14) with staggered cooldowns
+      shootingRef.current = Array.from({ length: 14 }, (_, i) => ({
         x: 0, y: 0, angle: 0, speed: 0, length: 0, opacity: 0,
         active: false,
-        cooldown: 55 + i * 50,
+        cooldown: 35 + i * 28,
       }));
     };
 

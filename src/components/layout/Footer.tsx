@@ -64,6 +64,7 @@ export function Footer() {
             <Magnetic strength={0.2}>
               <Link
                 href="/contact"
+                data-robot="Two clicks and we're talking."
                 className="inline-flex items-center gap-3 text-lg text-cream border border-rule px-6 py-4 hover:border-accent hover:text-accent transition-all duration-500 w-fit group"
                 style={{ fontFamily: "var(--font-sans)" }}
               >

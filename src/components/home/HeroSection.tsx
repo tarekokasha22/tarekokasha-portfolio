@@ -81,6 +81,7 @@ export function HeroSection() {
             <Magnetic strength={0.22}>
               <Link
                 href="/contact"
+                data-robot="Good call. This is where it starts."
                 className="btn-glow inline-flex items-center gap-3 text-ink text-sm px-6 py-3.5 font-medium tracking-wide transition-colors duration-300 hover:brightness-110 group"
                 style={{
                   fontFamily: "var(--font-sans)",
@@ -94,6 +95,7 @@ export function HeroSection() {
             <Magnetic strength={0.18}>
               <Link
                 href="/work"
+                data-robot="Real systems, shipped. Have a look."
                 className="text-sm text-muted hover:text-cream transition-colors duration-300 underline-accent"
                 style={{ fontFamily: "var(--font-sans)" }}
               >

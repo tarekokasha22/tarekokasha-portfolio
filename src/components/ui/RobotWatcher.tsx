@@ -21,10 +21,46 @@ export function RobotWatcher() {
   const visorScanRef = useRef<SVGRectElement>(null);
 
   const [isAwake, setIsAwake] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
   const sleepTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const scanX = useRef(0);
+  const waveT = useRef(0);
+  // While a contextual message is showing, the robot must stay awake + waving
+  const reactingRef = useRef(false);
 
   const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
+  // ── Contextual messages: any element with [data-robot="..."] speaks ──
+  useEffect(() => {
+    const over = (e: MouseEvent) => {
+      const el = (e.target as HTMLElement | null)?.closest<HTMLElement>("[data-robot]");
+      if (el) {
+        const msg = el.getAttribute("data-robot");
+        if (msg) {
+          reactingRef.current = true;
+          setMessage(msg);
+          setIsAwake(true);
+          clearTimeout(sleepTimer.current);
+        }
+      }
+    };
+    const out = (e: MouseEvent) => {
+      const el = (e.target as HTMLElement | null)?.closest("[data-robot]");
+      const next = (e.relatedTarget as HTMLElement | null)?.closest("[data-robot]");
+      if (el && !next) {
+        reactingRef.current = false;
+        setMessage(null);
+        clearTimeout(sleepTimer.current);
+        sleepTimer.current = setTimeout(() => setIsAwake(false), 4000);
+      }
+    };
+    document.addEventListener("mouseover", over, { passive: true });
+    document.addEventListener("mouseout", out, { passive: true });
+    return () => {
+      document.removeEventListener("mouseover", over);
+      document.removeEventListener("mouseout", out);
+    };
+  }, []);
 
   useEffect(() => {
     const handleMouse = (e: MouseEvent) => {
@@ -32,7 +68,10 @@ export function RobotWatcher() {
 
       setIsAwake(true);
       clearTimeout(sleepTimer.current);
-      sleepTimer.current = setTimeout(() => setIsAwake(false), 4000);
+      // Stay awake indefinitely while a message is being shown
+      if (!reactingRef.current) {
+        sleepTimer.current = setTimeout(() => setIsAwake(false), 4000);
+      }
 
       const rect = robotRef.current.getBoundingClientRect();
       // Head pivot is ~30% down the robot
@@ -89,12 +128,19 @@ export function RobotWatcher() {
         rightPupilRef.current.setAttribute("cx", String(46 + r.pupilX));
         rightPupilRef.current.setAttribute("cy", String(45 + r.pupilY));
       }
-      // Arms: shoulder pivots at (14,78) left and (58,78) right
+      // Arms: shoulder pivots at (14,78) left and (58,78) right.
+      // When speaking, the right arm raises and waves — a friendly greeting.
       if (leftArmRef.current) {
         leftArmRef.current.style.transform = `rotate(${-8 + r.armRot * 0.7}deg)`;
       }
       if (rightArmRef.current) {
-        rightArmRef.current.style.transform = `rotate(${8 + r.armRot * 0.7}deg)`;
+        if (reactingRef.current) {
+          waveT.current += 0.18;
+          const wave = -118 + Math.sin(waveT.current) * 14;
+          rightArmRef.current.style.transform = `rotate(${wave}deg)`;
+        } else {
+          rightArmRef.current.style.transform = `rotate(${8 + r.armRot * 0.7}deg)`;
+        }
       }
 
       // Visor scan line
@@ -125,6 +171,78 @@ export function RobotWatcher() {
       style={{ width: 72, height: 120, pointerEvents: "none" }}
       aria-hidden="true"
     >
+      {/* ── Contextual speech bubble ── */}
+      {message && (
+        <div
+          key={message}
+          style={{
+            position: "absolute",
+            bottom: 116,
+            right: 4,
+            width: 208,
+            padding: "11px 14px",
+            background: "rgba(13,13,16,0.94)",
+            border: "1px solid rgba(201,169,97,0.32)",
+            borderRadius: 12,
+            boxShadow: "0 10px 30px rgba(0,0,0,0.45)",
+            backdropFilter: "blur(6px)",
+            animation: "robotBubbleIn 0.42s cubic-bezier(0.16,1,0.3,1) both",
+            transformOrigin: "bottom right",
+          }}
+        >
+          <div
+            style={{
+              fontFamily: "var(--font-sans)",
+              fontSize: "8px",
+              letterSpacing: "0.22em",
+              textTransform: "uppercase",
+              color: "var(--color-accent)",
+              marginBottom: 5,
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+            }}
+          >
+            <span
+              style={{
+                width: 5,
+                height: 5,
+                borderRadius: "50%",
+                background: "#4CAF50",
+                display: "inline-block",
+                animation: "robotBubbleDot 1.4s ease-in-out infinite",
+              }}
+            />
+            Unit-01
+          </div>
+          <p
+            style={{
+              fontFamily: "var(--font-sans)",
+              fontSize: "12.5px",
+              lineHeight: 1.45,
+              color: "var(--color-cream)",
+              margin: 0,
+            }}
+          >
+            {message}
+          </p>
+          {/* Tail pointing down toward the robot */}
+          <span
+            style={{
+              position: "absolute",
+              bottom: -6,
+              right: 22,
+              width: 11,
+              height: 11,
+              background: "rgba(13,13,16,0.94)",
+              borderRight: "1px solid rgba(201,169,97,0.32)",
+              borderBottom: "1px solid rgba(201,169,97,0.32)",
+              transform: "rotate(45deg)",
+            }}
+          />
+        </div>
+      )}
+
       <svg
         viewBox="0 0 72 120"
         fill="none"

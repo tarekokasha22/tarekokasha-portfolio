@@ -71,6 +71,7 @@ export function Header() {
             <li>
               <Link
                 href="/contact"
+                data-robot="Good call. This is where it starts."
                 className="text-sm px-4 py-2 border border-rule text-cream/70 hover:border-accent hover:text-accent transition-all duration-300"
                 style={{ fontFamily: "var(--font-sans)" }}
               >

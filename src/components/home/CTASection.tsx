@@ -94,6 +94,7 @@ export function CTASection() {
           >
             <Link
               href="/contact"
+              data-robot="Thirty minutes. Bring the hard problem."
               className="inline-flex items-center gap-3 px-8 py-4 text-sm font-medium tracking-wide transition-all duration-500 hover:gap-5 hover:brightness-110 group"
               style={{
                 fontFamily: "var(--font-sans)",

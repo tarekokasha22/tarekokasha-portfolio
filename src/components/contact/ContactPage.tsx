@@ -364,6 +364,7 @@ export function ContactPage() {
                       <button
                         type="submit"
                         disabled={formState === "loading"}
+                        data-robot="Hit send. It reaches me directly."
                         className="btn-glow inline-flex items-center gap-3 px-6 py-3.5 text-sm font-medium tracking-wide transition-all duration-500 disabled:opacity-60 hover:gap-5 group"
                         style={{
                           fontFamily: "var(--font-sans)",

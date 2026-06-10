@@ -398,6 +398,7 @@ export function AboutPage() {
           <div className="flex items-center gap-6">
             <Link
               href="/contact"
+              data-robot="Thirty minutes. Bring the hard problem."
               className="inline-flex items-center gap-2 text-sm px-5 py-3 transition-all duration-500 hover:gap-4 group"
               style={{
                 fontFamily: "var(--font-sans)",
