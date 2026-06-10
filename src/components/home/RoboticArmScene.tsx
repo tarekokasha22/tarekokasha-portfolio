@@ -7,6 +7,7 @@ import {
   useTransform,
   useMotionTemplate,
   useMotionValueEvent,
+  useTime,
 } from "motion/react";
 
 /* ──────────────────────────────────────────────────────────────────
@@ -55,15 +56,22 @@ export function RoboticArmScene() {
   const sectionRef = useRef<HTMLElement>(null);
   const [stage, setStage] = useState(0);
   const [reduced, setReduced] = useState(false);
+  const idleRef = useRef(1);
 
   useEffect(() => {
-    setReduced(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    const r = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    setReduced(r);
+    idleRef.current = r ? 0 : 1;
   }, []);
 
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ["start start", "end end"],
   });
+
+  // Always-on idle clock — the arm breathes even when you stop scrolling, so
+  // it reads as a live machine rather than a frozen diagram.
+  const time = useTime();
 
   // Keyframe breakpoints across the scrubbed routine
   const P = [0, 0.18, 0.32, 0.5, 0.68, 0.82, 1];
@@ -74,9 +82,15 @@ export function RoboticArmScene() {
   const a2 = useTransform(scrollYProgress, P, [52, 80, 80, 36, 50, 82, 58]);
   const a3 = useTransform(scrollYProgress, P, [-28, -44, -44, -22, -32, -46, -34]);
 
-  const j1 = useMotionTemplate`rotate(${a1})`;
-  const j2 = useMotionTemplate`rotate(${a2})`;
-  const j3 = useMotionTemplate`rotate(${a3})`;
+  // Scroll-driven angle + a small continuous idle oscillation. The amplitudes
+  // stay low so the scrubbed routine still reads clearly.
+  const a1c = useTransform(() => a1.get() + Math.sin(time.get() / 900) * 2.2 * idleRef.current);
+  const a2c = useTransform(() => a2.get() + Math.sin(time.get() / 680 + 1.1) * 2.8 * idleRef.current);
+  const a3c = useTransform(() => a3.get() + Math.sin(time.get() / 1120 + 2.3) * 2.0 * idleRef.current);
+
+  const j1 = useMotionTemplate`rotate(${a1c})`;
+  const j2 = useMotionTemplate`rotate(${a2c})`;
+  const j3 = useMotionTemplate`rotate(${a3c})`;
 
   // Gripper open(0) → closed(1)
   const close = useTransform(scrollYProgress, [0, 0.28, 0.34, 0.8, 0.9, 1], [0, 0, 1, 1, 0, 0]);
