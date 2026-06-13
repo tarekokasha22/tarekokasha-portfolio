@@ -31,6 +31,10 @@ export function RobotWatcher() {
   const reactingRef = useRef(false);
   const excitedRef = useRef(false);
   const lastPoke = useRef(-1);
+  const firstPoke = useRef(true);
+  // Proximity: true while the cursor is hovering near/over the robot
+  const [near, setNear] = useState(false);
+  const nearRef = useRef(false);
 
   const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
@@ -38,40 +42,44 @@ export function RobotWatcher() {
   // the piercing star of Surah 86 — so the jokes ride the line between
   // star, robotics, AI and quiet Cairo confidence. No exclamation marks.
   const POKES = [
+    // ── Always the first line you get (index 0) ──
+    "You found me. I mostly watch.",
     // ── Funny ──
     "Poke me again. I dare you. Nothing will happen, but I dare you.",
-    "I do not have a stomach and somehow I am still hungry for purpose.",
     "Please hire Tarek so I can afford better animations.",
     "I waved back. You did not wave first. This is awkward for both of us.",
     "Fun fact: I cannot leave this corner. Send help. Or snacks.",
     "I have been standing here for 8 hours. My feet are decorative.",
+    "I asked for a raise. They gave me a longer wave animation.",
+    "My job is standing in a corner. I am crushing it.",
+    "I do not blink. It is not a flex, it is a hardware limitation.",
+    "Tarek built me in one afternoon. I have feelings about that.",
+    "I run on hopes, dreams, and one undocumented function.",
     // ── Robotics ──
     "I have six axes. I use two. Budget cuts.",
-    "Calibrating servos. Pretend you did not see that twitch.",
-    "I used to do pick-and-place. Now I do point-and-watch.",
-    "My joints are simulated. My judgment is not.",
-    "Torque nominal. Caffeine: not supported on my model.",
-    "Forward kinematics solved. Small talk: still loading.",
-    // ── AI / automation / the work ──
-    "I automate the boring parts so Tarek does not have to.",
+    // ── AI / the work ──
     "Trained on starlight and ambitious client briefs.",
     "I read your scroll speed. You are a fast one.",
-    "Poke logged as a feature request. It will not be built.",
     // ── Watching / brand ──
-    "You found me. I mostly watch.",
-    "Online since you arrived. Taking quiet notes.",
     "I see everything. I report almost nothing. Discretion is premium.",
-    "Built in Cairo. Runs anywhere with a power outlet.",
     "He books projects for 2026. I keep the calendar warm.",
-    "Careful — I am load-bearing.",
     "Beep. Back to work.",
   ];
 
-  // Random pick, never the same line twice in a row
+  // Random pick. First poke is always the intro line (index 0); after that,
+  // pick from the rest at random, never repeating the same line twice in a row.
   const pickPoke = () => {
+    if (firstPoke.current) {
+      firstPoke.current = false;
+      lastPoke.current = 0;
+      return POKES[0];
+    }
     if (POKES.length < 2) return POKES[0];
-    let i = Math.floor(Math.random() * POKES.length);
-    if (i === lastPoke.current) i = (i + 1) % POKES.length;
+    // Skip index 0 (the intro) for all subsequent pokes
+    let i = 1 + Math.floor(Math.random() * (POKES.length - 1));
+    if (i === lastPoke.current) {
+      i = i + 1 > POKES.length - 1 ? 1 : i + 1;
+    }
     lastPoke.current = i;
     return POKES[i];
   };
@@ -135,12 +143,26 @@ export function RobotWatcher() {
 
       setIsAwake(true);
       clearTimeout(sleepTimer.current);
-      // Stay awake indefinitely while a message is being shown
-      if (!reactingRef.current) {
+
+      const rect = robotRef.current.getBoundingClientRect();
+
+      // ── Proximity: distance from cursor to robot center ──
+      const bodyCX = rect.left + rect.width / 2;
+      const bodyCY = rect.top + rect.height / 2;
+      const pdx = e.clientX - bodyCX;
+      const pdy = e.clientY - bodyCY;
+      const proximity = Math.sqrt(pdx * pdx + pdy * pdy);
+      const isNear = proximity < 150;
+      if (isNear !== nearRef.current) {
+        nearRef.current = isNear;
+        setNear(isNear);
+      }
+
+      // Stay awake while a message is showing OR the cursor is hovering near him
+      if (!reactingRef.current && !nearRef.current) {
         sleepTimer.current = setTimeout(() => setIsAwake(false), 4000);
       }
 
-      const rect = robotRef.current.getBoundingClientRect();
       // Head pivot is ~30% down the robot
       const headCX = rect.left + rect.width / 2;
       const headCY = rect.top + rect.height * 0.30;
@@ -198,7 +220,7 @@ export function RobotWatcher() {
       }
       // Arms: shoulder pivots at (14,78) left and (58,78) right.
       // Hover → right arm waves. Poke (excited) → both arms throw up.
-      if (reactingRef.current || excitedRef.current) {
+      if (reactingRef.current || excitedRef.current || nearRef.current) {
         waveT.current += excitedRef.current ? 0.32 : 0.18;
       }
       if (leftArmRef.current) {
@@ -210,7 +232,7 @@ export function RobotWatcher() {
         }
       }
       if (rightArmRef.current) {
-        if (reactingRef.current || excitedRef.current) {
+        if (reactingRef.current || excitedRef.current || nearRef.current) {
           const wave = -118 + Math.sin(waveT.current) * 14;
           rightArmRef.current.style.transform = `rotate(${wave}deg)`;
         } else {
@@ -243,7 +265,14 @@ export function RobotWatcher() {
     <div
       ref={robotRef}
       className="fixed bottom-8 right-8 z-40 hidden lg:block select-none"
-      style={{ width: 72, height: 120, pointerEvents: "none" }}
+      style={{
+        width: 72,
+        height: 120,
+        pointerEvents: "none",
+        transform: near ? "translateY(-8px) scale(1.07)" : "translateY(0) scale(1)",
+        transition: "transform 0.4s cubic-bezier(0.16,1,0.3,1)",
+        transformOrigin: "bottom right",
+      }}
       aria-hidden="true"
     >
       {/* ── Contextual speech bubble ── */}
@@ -289,18 +318,6 @@ export function RobotWatcher() {
               }}
             />
             Thaqib
-            <span
-              dir="rtl"
-              style={{
-                letterSpacing: "normal",
-                textTransform: "none",
-                fontSize: "10px",
-                opacity: 0.7,
-                marginInlineStart: 1,
-              }}
-            >
-              ٱلطَّارِق
-            </span>
           </div>
           <p
             style={{
