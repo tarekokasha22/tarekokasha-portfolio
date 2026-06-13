@@ -3,7 +3,6 @@ import { HeroSection } from "@/components/home/HeroSection";
 import { ProofSection } from "@/components/home/ProofSection";
 import { TechMarquee } from "@/components/home/TechMarquee";
 import { ServicesSection } from "@/components/home/ServicesSection";
-import { RoboticArmScene } from "@/components/home/RoboticArmScene";
 import { SelectedWork } from "@/components/home/SelectedWork";
 import { ProcessSection } from "@/components/home/ProcessSection";
 import { CTASection } from "@/components/home/CTASection";
@@ -23,7 +22,6 @@ export default function HomePage() {
       <ProofSection />
       <TechMarquee />
       <ServicesSection />
-      <RoboticArmScene />
       <SelectedWork />
       <ProcessSection />
       <CTASection />
