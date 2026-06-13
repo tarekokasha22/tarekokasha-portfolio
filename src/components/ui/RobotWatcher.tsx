@@ -30,26 +30,57 @@ export function RobotWatcher() {
   // While a contextual message is showing, the robot must stay awake + waving
   const reactingRef = useRef(false);
   const excitedRef = useRef(false);
-  const clickIdx = useRef(0);
+  const lastPoke = useRef(-1);
 
   const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
-  // Playful lines the robot says when you poke it
+  // Deadpan lines Thaqib says when you poke him. Named after At-Tariq —
+  // the piercing star of Surah 86 — so the jokes ride the line between
+  // star, robotics, AI and quiet Cairo confidence. No exclamation marks.
   const POKES = [
+    // ── Star / the name ──
+    "Thaqib. The piercing star. Currently piercing your bottom-right corner.",
+    "Named after a star in the Quran. Parked on a website. We all make choices.",
+    "A star that visits by night. Tonight, the night is your scroll bar.",
+    "Surah 86 energy. Minimal runtime overhead.",
+    "I pierce the darkness. Also low-contrast UI. Both are crimes.",
+    "Thaqib means piercing-bright. The brightness is gold. Tarek's idea.",
+    // ── Robotics ──
+    "I have six axes. I use two. Budget cuts.",
+    "Calibrating servos. Pretend you did not see that twitch.",
+    "I used to do pick-and-place. Now I do point-and-watch.",
+    "My joints are simulated. My judgment is not.",
+    "Torque nominal. Caffeine: not supported on my model.",
+    "Forward kinematics solved. Small talk: still loading.",
+    // ── AI / automation / the work ──
+    "I automate the boring parts so Tarek does not have to.",
+    "Trained on starlight and ambitious client briefs.",
+    "I read your scroll speed. You are a fast one.",
+    "Poke logged as a feature request. It will not be built.",
+    // ── Watching / brand ──
     "You found me. I mostly watch.",
-    "Diagnostics: all systems nominal.",
-    "I run the boring parts so he doesn't.",
-    "Careful — I'm load-bearing.",
-    "Online since you got here.",
+    "Online since you arrived. Taking quiet notes.",
+    "I see everything. I report almost nothing. Discretion is premium.",
+    "Built in Cairo. Runs anywhere with a power outlet.",
+    "He books projects for 2026. I keep the calendar warm.",
+    "Careful — I am load-bearing.",
     "Beep. Back to work.",
   ];
+
+  // Random pick, never the same line twice in a row
+  const pickPoke = () => {
+    if (POKES.length < 2) return POKES[0];
+    let i = Math.floor(Math.random() * POKES.length);
+    if (i === lastPoke.current) i = (i + 1) % POKES.length;
+    lastPoke.current = i;
+    return POKES[i];
+  };
 
   const handlePoke = () => {
     setIsAwake(true);
     clearTimeout(sleepTimer.current);
 
-    const msg = POKES[clickIdx.current % POKES.length];
-    clickIdx.current += 1;
+    const msg = pickPoke();
     reactingRef.current = true;
     excitedRef.current = true;
     setMessage(msg);
@@ -257,7 +288,19 @@ export function RobotWatcher() {
                 animation: "robotBubbleDot 1.4s ease-in-out infinite",
               }}
             />
-            Unit-01
+            Thaqib
+            <span
+              dir="rtl"
+              style={{
+                letterSpacing: "normal",
+                textTransform: "none",
+                fontSize: "10px",
+                opacity: 0.7,
+                marginInlineStart: 1,
+              }}
+            >
+              ٱلطَّارِق
+            </span>
           </div>
           <p
             style={{
