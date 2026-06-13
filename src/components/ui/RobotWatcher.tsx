@@ -102,7 +102,7 @@ export function RobotWatcher() {
       setMessage(null);
       clearTimeout(sleepTimer.current);
       sleepTimer.current = setTimeout(() => setIsAwake(false), 4000);
-    }, 2600);
+    }, 3600);
   };
 
   // ── Contextual messages: any element with [data-robot="..."] speaks ──
@@ -264,7 +264,7 @@ export function RobotWatcher() {
   return (
     <div
       ref={robotRef}
-      className="fixed bottom-8 right-8 z-40 hidden lg:block select-none"
+      className="fixed bottom-5 right-4 lg:bottom-8 lg:right-8 z-40 block select-none"
       style={{
         width: 72,
         height: 120,
@@ -283,7 +283,7 @@ export function RobotWatcher() {
             position: "absolute",
             bottom: 116,
             right: 4,
-            width: 208,
+            width: "min(208px, calc(100vw - 28px))",
             padding: "11px 14px",
             background: "rgba(13,13,16,0.94)",
             border: "1px solid rgba(201,169,97,0.32)",
