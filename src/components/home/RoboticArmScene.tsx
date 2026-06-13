@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
   motion,
-  useScroll,
   useTransform,
   useMotionTemplate,
   useMotionValueEvent,
@@ -11,12 +10,12 @@ import {
 } from "motion/react";
 
 /* ──────────────────────────────────────────────────────────────────
-   UR5e pick-and-place — scroll-scrubbed, rail-mounted.
+   UR5e pick-and-place — autonomous, always running.
 
-   The arm base MOVES along a horizontal track: it slides left to the
-   PICK platform, grips the payload, sweeps all the way right to PLACE
-   it, then returns to home. Joint angles fold the arm DOWN at each end
-   so the gripper visibly touches the platform before picking/placing.
+   The arm runs its routine on its own clock (no scroll required): it
+   slides left to the PICK platform, folds down and grips the payload,
+   sweeps right to PLACE it, then shuttles back the other way. A smooth
+   ping-pong loop driven by useTime() keeps it in perpetual motion.
 
    Forward kinematics: nested SVG <g translate> + <motion.g rotate>.
    Each joint sits at local (0,0) of a translated group, so rotate()
@@ -30,6 +29,8 @@ const accent     = "#C9A961";
 const PICK_X  = 162;   // x-centre of the pick platform
 const PLACE_X = 478;   // x-centre of the place platform
 const BASE_Y  = 400;   // normal carriage y (work surface level)
+
+const CYCLE = 11000;   // ms for a full forward sweep (ping-pong doubles it)
 
 function Link({ length, width = 18 }: { length: number; width?: number }) {
   return (
@@ -57,27 +58,28 @@ function Joint({ r = 9 }: { r?: number }) {
 const STAGES = ["APPROACH", "GRIP", "TRANSFER", "PLACE", "RELEASE"] as const;
 
 export function RoboticArmScene() {
-  const sectionRef = useRef<HTMLElement>(null);
   const [stage, setStage] = useState(0);
   const [reduced, setReduced] = useState(false);
-  const idleRef = useRef(1);
+  const reducedRef = useRef(false);
 
   useEffect(() => {
     const r = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     setReduced(r);
-    idleRef.current = r ? 0 : 1;
+    reducedRef.current = r;
   }, []);
 
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start start", "end end"],
+  // ── Autonomous clock → ping-pong progress 0→1→0 ──
+  const time = useTime();
+  const progress = useTransform(() => {
+    // Reduced motion: hold the arm in a composed "grip" pose, no animation
+    if (reducedRef.current) return 0.30;
+    const raw = (time.get() % CYCLE) / CYCLE;          // 0 → 1 sawtooth
+    const tri = raw < 0.5 ? raw * 2 : 2 - raw * 2;     // 0 → 1 → 0 triangle
+    return tri * tri * (3 - 2 * tri);                  // smoothstep ease
   });
 
-  // Always-on idle clock so the arm is never frozen mid-scroll-stop
-  const time = useTime();
-
   /* ────────────────────────────────────────────────────
-     Keyframe timeline
+     Keyframe timeline (driven by `progress`)
      p=0    : home centre (320)
      p=0.15 : sliding toward pick  (~230)
      p=0.30 : at pick  (162) — arm folds DOWN to platform
@@ -89,72 +91,50 @@ export function RoboticArmScene() {
   const P = [0, 0.15, 0.30, 0.50, 0.70, 0.85, 1.0];
 
   // ── Rail carriage X: the whole arm translates left then right ──
-  const bxRaw = useTransform(scrollYProgress, P, [320, 230, PICK_X, 320, PLACE_X, 500, 320]);
-  // Tiny mechanical tremor on top (idle)
-  const bx    = useTransform(() => bxRaw.get() + Math.sin(time.get() / 820) * 1.5 * idleRef.current);
-
+  const bx = useTransform(progress, P, [320, 230, PICK_X, 320, PLACE_X, 500, 320]);
   // ── Carriage Y: dips down at pick/place so the arm reaches the platform ──
-  const by = useTransform(scrollYProgress, P, [BASE_Y, BASE_Y + 4, BASE_Y + 10, BASE_Y, BASE_Y + 10, BASE_Y + 4, BASE_Y]);
-
-  // Combined base position for the arm group
+  const by = useTransform(progress, P, [BASE_Y, BASE_Y + 4, BASE_Y + 10, BASE_Y, BASE_Y + 10, BASE_Y + 4, BASE_Y]);
   const baseT = useMotionTemplate`translate(${bx} ${by})`;
 
   /* ────────────────────────────────────────────────────
      Joint angles  (degrees, clockwise from vertical)
-
      At GRIP / PLACE the elbow folds to ~160° — nearly
      doubled back — which brings the wrist DOWN close to
      the platform even though the base is floor-level.
-     The shoulder swings ±22° to offset toward each
-     platform x.  Wrist rotates ≈70° at grip to angle
-     the fingers toward the payload.
   ──────────────────────────────────────────────────── */
-  const a1 = useTransform(scrollYProgress, P, [-10, -18, -22,  0,  22,  18,  10]);
-  const a2 = useTransform(scrollYProgress, P, [ 52, 115, 160, 44, 160, 115,  52]);
-  const a3 = useTransform(scrollYProgress, P, [-26, -48,  70,-18,  -70,  48,  26]);
+  const a1 = useTransform(progress, P, [-10, -18, -22,  0,  22,  18,  10]);
+  const a2 = useTransform(progress, P, [ 52, 115, 160, 44, 160, 115,  52]);
+  const a3 = useTransform(progress, P, [-26, -48,  70,-18,  -70,  48,  26]);
 
-  // Layer idle breath on top — low amplitude so scrub still reads clearly
-  const a1c = useTransform(() => a1.get() + Math.sin(time.get() / 900)       * 2.0 * idleRef.current);
-  const a2c = useTransform(() => a2.get() + Math.sin(time.get() / 680 + 1.1) * 2.6 * idleRef.current);
-  const a3c = useTransform(() => a3.get() + Math.sin(time.get() / 1100 + 2.3)* 1.8 * idleRef.current);
-
-  const j1 = useMotionTemplate`rotate(${a1c})`;
-  const j2 = useMotionTemplate`rotate(${a2c})`;
-  const j3 = useMotionTemplate`rotate(${a3c})`;
+  const j1 = useMotionTemplate`rotate(${a1})`;
+  const j2 = useMotionTemplate`rotate(${a2})`;
+  const j3 = useMotionTemplate`rotate(${a3})`;
 
   // ── Gripper: open → close → carry → open ──
-  const close     = useTransform(scrollYProgress, [0, 0.27, 0.33, 0.78, 0.88, 1], [0, 0, 1, 1, 0, 0]);
+  const close     = useTransform(progress, [0, 0.27, 0.33, 0.78, 0.88, 1], [0, 0, 1, 1, 0, 0]);
   const fingerPos = useTransform(close, [0, 1], [13, 5]);
   const fingerNeg = useTransform(close, [0, 1], [-13, -5]);
   const fingerLT  = useMotionTemplate`translate(${fingerNeg} 0)`;
   const fingerRT  = useMotionTemplate`translate(${fingerPos} 0)`;
 
   // ── Payload hand-off ──
-  // left platform object vanishes when gripper closes
-  const leftOp  = useTransform(scrollYProgress, [0, 0.30, 0.35], [1, 1, 0]);
-  // held by gripper — travels with the arm
-  const heldOp  = useTransform(scrollYProgress, [0, 0.30, 0.35, 0.80, 0.90], [0, 0, 1, 1, 0]);
-  // right platform object fades in after gripper releases
-  const rightOp = useTransform(scrollYProgress, [0, 0.85, 0.93], [0, 0, 1]);
+  const leftOp  = useTransform(progress, [0, 0.30, 0.35], [1, 1, 0]);
+  const heldOp  = useTransform(progress, [0, 0.30, 0.35, 0.80, 0.90], [0, 0, 1, 1, 0]);
+  const rightOp = useTransform(progress, [0, 0.85, 0.93], [0, 0, 1]);
 
-  const barW = useTransform(scrollYProgress, [0, 1], ["0%", "100%"]);
+  const barW = useTransform(progress, [0, 1], ["8%", "100%"]);
 
-  useMotionValueEvent(scrollYProgress, "change", (p) => {
+  useMotionValueEvent(progress, "change", (p) => {
     const next = p < 0.18 ? 0 : p < 0.36 ? 1 : p < 0.66 ? 2 : p < 0.88 ? 3 : 4;
     setStage((cur) => (cur === next ? cur : next));
   });
 
   return (
     <section
-      ref={sectionRef}
-      className="relative border-t border-rule"
-      style={{ height: reduced ? "auto" : "300vh" }}
-      aria-label="Interactive robotics: a rail-mounted arm performing a scroll-driven pick-and-place routine."
+      className="relative border-t border-rule overflow-hidden"
+      aria-label="Interactive robotics: a rail-mounted arm running an autonomous pick-and-place routine."
     >
-      <div
-        className={reduced ? "relative" : "sticky top-0"}
-        style={{ height: reduced ? "auto" : "100vh", overflow: "hidden" }}
-      >
+      <div className="relative" style={{ minHeight: "100vh" }}>
         {/* Blueprint grid */}
         <div aria-hidden className="absolute inset-0 pointer-events-none" style={{
           backgroundImage:
@@ -177,15 +157,16 @@ export function RoboticArmScene() {
                 fontWeight: 400, letterSpacing: "-0.02em", lineHeight: 1.2,
               }}>
                 A pick-and-place,{" "}
-                <span style={{ color: "var(--color-muted)", fontStyle: "italic" }}>scrubbed by your scroll.</span>
+                <span style={{ color: "var(--color-muted)", fontStyle: "italic" }}>running on its own.</span>
               </h2>
               <p className="mt-4" style={{
                 fontFamily: "var(--font-sans)", fontSize: "0.95rem",
                 color: "var(--color-muted)", lineHeight: 1.6,
               }}>
                 The arm slides on its rail, reaches down to grip, sweeps
-                across, and places — the same motion logic behind my UR5e
-                robotics work. Keep scrolling to run it end to end.
+                across, and places — then shuttles back and does it again.
+                The same motion logic behind my UR5e robotics work, looping
+                live.
               </p>
             </div>
           </div>
@@ -218,25 +199,20 @@ export function RoboticArmScene() {
             <svg viewBox="0 0 640 460" width="100%" height="100%" fill="none" style={{ display: "block" }}>
 
               {/* ── Rail track ── */}
-              {/* Channel body */}
               <rect x="72" y={BASE_Y + 2} width="496" height="16" rx="3"
                 fill="rgba(16,16,20,0.85)" stroke={strokeDim} strokeWidth="1.2" />
-              {/* Rail top surface */}
               <line x1="80" y1={BASE_Y + 4} x2="560" y2={BASE_Y + 4} stroke={stroke} strokeWidth="1" />
-              {/* Segmentation ticks */}
               {Array.from({ length: 25 }).map((_, i) => (
                 <line key={i}
                   x1={80 + i * 20} y1={BASE_Y + 2}
                   x2={80 + i * 20} y2={BASE_Y + 18}
                   stroke={strokeDim} strokeWidth="0.8" />
               ))}
-              {/* End stops */}
               <rect x="68" y={BASE_Y - 2} width="8" height="22" rx="2"
                 fill="rgba(18,18,22,0.95)" stroke={stroke} strokeWidth="1.2" />
               <rect x="564" y={BASE_Y - 2} width="8" height="22" rx="2"
                 fill="rgba(18,18,22,0.95)" stroke={stroke} strokeWidth="1.2" />
 
-              {/* Work surface hairline above the rail */}
               <line x1="70" y1={BASE_Y} x2="570" y2={BASE_Y} stroke={strokeDim} strokeWidth="1" />
 
               {/* ── PICK platform ── */}
@@ -263,12 +239,10 @@ export function RoboticArmScene() {
 
               {/* ── Arm assembly: carriage rides on the rail ── */}
               <motion.g transform={baseT}>
-                {/* Carriage housing */}
                 <rect x="-30" y="-2" width="60" height="18" rx="3"
                   fill="rgba(13,13,16,0.96)" stroke={stroke} strokeWidth="1.5" />
                 <rect x="-16" y="-14" width="32" height="16" rx="3"
                   fill="rgba(18,18,22,0.95)" stroke={stroke} strokeWidth="1.3" />
-                {/* Status LED */}
                 <circle cx="0" cy="7" r="2.2" fill={accent}
                   style={{ filter: `drop-shadow(0 0 4px ${accent})` }} />
 
@@ -288,7 +262,6 @@ export function RoboticArmScene() {
                         <g transform="translate(0,-118)">
                           <motion.g transform={j3}>
                             <Joint r={7} />
-                            {/* Wrist plate */}
                             <rect x="-12" y="-30" width="24" height="26" rx="4"
                               fill="rgba(18,18,22,0.95)" stroke={stroke} strokeWidth="1.4" />
                             <circle cx="0" cy="-34" r="2.4" fill={accent}
@@ -344,7 +317,7 @@ export function RoboticArmScene() {
                     fontFamily: "var(--font-sans)", letterSpacing: "0.12em",
                     color:       i === stage ? "var(--color-ink)"    : "var(--color-muted)",
                     background:  i === stage ? "var(--color-accent)" : "transparent",
-                    borderColor: i <= stage  ? "var(--color-accent)" : "var(--color-rule)",
+                    borderColor: i === stage  ? "var(--color-accent)" : "var(--color-rule)",
                   }}>
                   {s}
                 </span>

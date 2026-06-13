@@ -5,41 +5,36 @@ import { motion, useMotionValue, useSpring } from "motion/react";
 
 type CursorMode = "default" | "hover" | "project";
 
+/* ──────────────────────────────────────────────────────────────────
+   Minimal premium cursor — a precise dot that tracks the pointer
+   exactly, trailed by a thin ring that lags with a soft spring.
+   On interactive elements the ring expands and warms to gold; over a
+   project link it grows further and reveals a "VIEW" label.
+   Restraint over spectacle — Editorial Noir.
+   ────────────────────────────────────────────────────────────────── */
+
 export function CustomCursor() {
   const [mode, setMode] = useState<CursorMode>("default");
   const [visible, setVisible] = useState(false);
 
-  const mouseX = useMotionValue(-200);
-  const mouseY = useMotionValue(-200);
-  const dotX  = useMotionValue(-200);
-  const dotY  = useMotionValue(-200);
+  // Dot follows the pointer 1:1
+  const dotX = useMotionValue(-200);
+  const dotY = useMotionValue(-200);
 
-  // Reticle — medium lag
-  const ringSpring  = { damping: 26, stiffness: 280, mass: 0.55 };
-  // Crosshair core — snappy
-  const dotSpring   = { damping: 50, stiffness: 600, mass: 0.2 };
-  // Trail — very slow / ghostly
-  const trailSpring = { damping: 18, stiffness: 90, mass: 1.0 };
-
-  const rx = useSpring(mouseX, ringSpring);
-  const ry = useSpring(mouseY, ringSpring);
-  const dx = useSpring(dotX,  dotSpring);
-  const dy = useSpring(dotY,  dotSpring);
-  const tx = useSpring(mouseX, trailSpring);
-  const ty = useSpring(mouseY, trailSpring);
+  // Ring lags behind with a smooth spring
+  const ringSpring = { damping: 28, stiffness: 350, mass: 0.5 };
+  const rx = useSpring(dotX, ringSpring);
+  const ry = useSpring(dotY, ringSpring);
 
   useEffect(() => {
     const move = (e: MouseEvent) => {
-      mouseX.set(e.clientX);
-      mouseY.set(e.clientY);
       dotX.set(e.clientX);
       dotY.set(e.clientY);
       if (!visible) setVisible(true);
     };
 
-    // Event delegation — one listener on the document instead of a
-    // MutationObserver + per-element listeners. Zero hydration churn, and
-    // it works automatically for links injected by client navigation.
+    // Event delegation — one pair of listeners on the document. Works for
+    // links injected by client navigation; zero hydration churn.
     const over = (e: MouseEvent) => {
       const el = (e.target as HTMLElement | null)?.closest<HTMLElement>(
         "a, button, [data-cursor]"
@@ -68,81 +63,48 @@ export function CustomCursor() {
 
   if (!visible) return null;
 
-  const size      = mode === "project" ? 72 : mode === "hover" ? 52 : 36;
-  const trailSize = mode === "project" ? 96 : mode === "hover" ? 66 : 46;
-  const spin      = mode === "project" ? 6  : mode === "hover" ? 9  : 18;
-
-  // HUD targeting reticle — always reads as a robotics/scanner cursor
-  const bracket =
-    mode === "project"
-      ? "rgba(201,169,97,0.95)"
-      : mode === "hover"
-      ? "rgba(244,239,230,0.78)"
-      : "rgba(201,169,97,0.6)";
+  const ringSize  = mode === "project" ? 64 : mode === "hover" ? 44 : 30;
+  const ringColor =
+    mode === "default" ? "rgba(244,239,230,0.45)" : "rgba(201,169,97,0.9)";
+  const ringBg =
+    mode === "default" ? "transparent" : "rgba(201,169,97,0.06)";
+  const dotScale = mode === "default" ? 1 : 0.35;
 
   return (
     <>
-      {/* ── Ghost trail ring (slowest) ── */}
-      <motion.div
-        style={{
-          x: tx, y: ty,
-          translateX: "-50%", translateY: "-50%",
-          position: "fixed", top: 0, left: 0,
-          pointerEvents: "none", zIndex: 9996,
-        }}
-      >
-        <motion.div
-          animate={{ width: trailSize, height: trailSize, opacity: mode === "default" ? 0.1 : 0.07 }}
-          transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-          style={{
-            borderRadius: "50%",
-            border: "1px solid rgba(201,169,97,0.4)",
-          }}
-        />
-      </motion.div>
-
-      {/* ── Targeting reticle (rotating bracket cage) ── */}
+      {/* ── Lagging ring ── */}
       <motion.div
         style={{
           x: rx, y: ry,
           translateX: "-50%", translateY: "-50%",
           position: "fixed", top: 0, left: 0,
           pointerEvents: "none", zIndex: 9998,
+          display: "flex", alignItems: "center", justifyContent: "center",
         }}
       >
         <motion.div
-          animate={{ width: size, height: size, rotate: 360 }}
-          transition={{
-            width:  { duration: 0.32, ease: [0.16, 1, 0.3, 1] },
-            height: { duration: 0.32, ease: [0.16, 1, 0.3, 1] },
-            rotate: { repeat: Infinity, ease: "linear", duration: spin },
+          animate={{
+            width: ringSize,
+            height: ringSize,
+            borderColor: ringColor,
+            backgroundColor: ringBg,
           }}
-          style={{ position: "absolute", top: 0, left: 0, translateX: "-50%", translateY: "-50%" }}
-        >
-          <svg viewBox="0 0 100 100" width="100%" height="100%" fill="none" style={{ overflow: "visible" }}>
-            {/* Corner brackets */}
-            <path d="M8 28 V8 H28"   stroke={bracket} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M72 8 H92 V28"  stroke={bracket} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M92 72 V92 H72" stroke={bracket} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M28 92 H8 V72"  stroke={bracket} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-            {/* Crosshair edge ticks */}
-            <line x1="50" y1="1"  x2="50" y2="13" stroke={bracket} strokeWidth="2.5" strokeLinecap="round" opacity="0.8" />
-            <line x1="50" y1="87" x2="50" y2="99" stroke={bracket} strokeWidth="2.5" strokeLinecap="round" opacity="0.8" />
-            <line x1="1"  y1="50" x2="13" y2="50" stroke={bracket} strokeWidth="2.5" strokeLinecap="round" opacity="0.8" />
-            <line x1="87" y1="50" x2="99" y2="50" stroke={bracket} strokeWidth="2.5" strokeLinecap="round" opacity="0.8" />
-          </svg>
-        </motion.div>
-
-        {/* VIEW label — does not rotate */}
-        <motion.span
-          animate={{ opacity: mode === "project" ? 1 : 0, scale: mode === "project" ? 1 : 0.6 }}
-          transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
           style={{
-            position: "absolute", top: 0, left: 0,
-            transform: "translate(-50%, -50%)",
+            borderRadius: "50%",
+            borderWidth: 1,
+            borderStyle: "solid",
+          }}
+        />
+        {/* VIEW label — fades in only over a project link */}
+        <motion.span
+          animate={{ opacity: mode === "project" ? 1 : 0 }}
+          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          style={{
+            position: "absolute",
             fontFamily: "var(--font-sans)",
             fontSize: "8px",
-            letterSpacing: "0.2em",
+            letterSpacing: "0.22em",
             color: "var(--color-accent)",
             userSelect: "none",
             whiteSpace: "nowrap",
@@ -152,29 +114,25 @@ export function CustomCursor() {
         </motion.span>
       </motion.div>
 
-      {/* ── Center crosshair core ── */}
+      {/* ── Precise dot (exact follow) ── */}
       <motion.div
         style={{
-          x: dx, y: dy,
+          x: dotX, y: dotY,
           translateX: "-50%", translateY: "-50%",
           position: "fixed", top: 0, left: 0,
           pointerEvents: "none", zIndex: 9999,
         }}
-        animate={{ opacity: mode === "project" ? 0 : 1, scale: mode === "hover" ? 0.85 : 1 }}
-        transition={{ duration: 0.18 }}
+        animate={{ scale: dotScale }}
+        transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
       >
-        <svg
-          width="20" height="20" viewBox="0 0 40 40" fill="none"
-          style={{ display: "block", transform: "translate(-50%, -50%)", position: "absolute", top: 0, left: 0 }}
-        >
-          {/* Crosshair plus with a center gap */}
-          <line x1="20" y1="4"  x2="20" y2="13" stroke="var(--color-accent)" strokeWidth="2" strokeLinecap="round" />
-          <line x1="20" y1="27" x2="20" y2="36" stroke="var(--color-accent)" strokeWidth="2" strokeLinecap="round" />
-          <line x1="4"  y1="20" x2="13" y2="20" stroke="var(--color-accent)" strokeWidth="2" strokeLinecap="round" />
-          <line x1="27" y1="20" x2="36" y2="20" stroke="var(--color-accent)" strokeWidth="2" strokeLinecap="round" />
-          {/* Center lock dot */}
-          <circle cx="20" cy="20" r="1.8" fill="var(--color-accent)" />
-        </svg>
+        <div
+          style={{
+            width: 6, height: 6,
+            borderRadius: "50%",
+            background: "var(--color-accent)",
+            transform: "translate(-50%, -50%)",
+          }}
+        />
       </motion.div>
     </>
   );
