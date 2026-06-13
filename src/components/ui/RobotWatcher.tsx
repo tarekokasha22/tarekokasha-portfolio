@@ -38,13 +38,13 @@ export function RobotWatcher() {
   // the piercing star of Surah 86 — so the jokes ride the line between
   // star, robotics, AI and quiet Cairo confidence. No exclamation marks.
   const POKES = [
-    // ── Star / the name ──
-    "Thaqib. The piercing star. Currently piercing your bottom-right corner.",
-    "Named after a star in the Quran. Parked on a website. We all make choices.",
-    "A star that visits by night. Tonight, the night is your scroll bar.",
-    "Surah 86 energy. Minimal runtime overhead.",
-    "I pierce the darkness. Also low-contrast UI. Both are crimes.",
-    "Thaqib means piercing-bright. The brightness is gold. Tarek's idea.",
+    // ── Funny ──
+    "Poke me again. I dare you. Nothing will happen, but I dare you.",
+    "I do not have a stomach and somehow I am still hungry for purpose.",
+    "Please hire Tarek so I can afford better animations.",
+    "I waved back. You did not wave first. This is awkward for both of us.",
+    "Fun fact: I cannot leave this corner. Send help. Or snacks.",
+    "I have been standing here for 8 hours. My feet are decorative.",
     // ── Robotics ──
     "I have six axes. I use two. Budget cuts.",
     "Calibrating servos. Pretend you did not see that twitch.",
