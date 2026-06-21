@@ -15,10 +15,15 @@ const RobotWatcher = dynamic(
   () => import("@/components/ui/RobotWatcher").then((m) => ({ default: m.RobotWatcher })),
   { ssr: false }
 );
+const IntroLoader = dynamic(
+  () => import("@/components/ui/IntroLoader").then((m) => ({ default: m.IntroLoader })),
+  { ssr: false }
+);
 
 export function ClientWidgets() {
   return (
     <>
+      <IntroLoader />
       <CustomCursor />
       <ScrollProgress />
       <RobotWatcher />
