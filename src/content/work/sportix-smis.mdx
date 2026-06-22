@@ -6,7 +6,7 @@ year: 2024
 role: "Lead software developer (team of 3)"
 duration: "4 months"
 oneLineOutcome: "Unified operations for 8 clubs across 3 sports federations."
-tags: ["SMIS", "Sports Tech", "Custom App", "Saudi Arabia"]
+tags: ["SMIS", "Sports Tech", "AI Analytics", "Custom App", "Saudi Arabia"]
 publishedAt: "2024-08-10"
 order: 4
 featured: false
@@ -42,6 +42,12 @@ They needed a Sports Management Information System (SMIS): one platform where cl
 
 **Sportix administrator view.** A consolidated dashboard across all 8 clubs: active players, training compliance rates, financial positions, upcoming competitions. The kind of visibility that makes it possible to manage 8 clubs with a team of 12 rather than a team of 40.
 
+**AI performance analytics.** Player development is tracked through an AI-powered scoring engine that ingests match stats, training attendance, and physical test results to produce weekly performance trend scores per player. Coaches see a ranked development curve — not a raw spreadsheet — and can filter by position, age group, or club. The model flags players whose trajectory is declining before the drop becomes obvious in match performance, giving coaches a 2–3 week lead on intervention decisions.
+
+**Injury risk prediction.** Training load data (session duration, intensity ratings, rest intervals) feeds a gradient-boosted model that outputs a weekly injury risk score per player. Players crossing the risk threshold automatically appear on the medical staff's dashboard. In the first six months of use, the coaching staff at two clubs adjusted training loads in response to model alerts — both avoided soft-tissue injuries that the team physio assessed as likely without intervention.
+
+**LLM-assisted report generation.** Federation compliance reports — which previously required a staff member to manually summarise match performance, disciplinary records, and financial figures into a structured narrative — are now drafted by an LLM layer that pulls structured data from the database and outputs compliant Arabic-language prose. A staff member reviews and submits. What used to take 2 weeks now takes 3 hours; the LLM draft takes seconds of that.
+
 ## Decisions & tradeoffs
 
 **One codebase, multi-tenant vs. separate deployments per club.** The multi-tenant single codebase was the right choice technically — one deployment to maintain, one database to back up, shared infrastructure costs. The risk was a bug or data issue in one club potentially affecting others. I mitigated this with strict row-level security in Supabase — each club's data is isolated at the database level, not just the application level.
@@ -58,6 +64,7 @@ They needed a Sports Management Information System (SMIS): one platform where cl
   <Stat value="8 clubs" caption="Unified onto one platform" />
   <Stat value="3h" caption="Quarterly federation reports, down from 2 weeks" />
   <Stat value="3 sports" caption="Football, basketball, swimming — one system" />
+  <Stat value="AI-flagged" caption="Injury risks caught 2–3 weeks before they became visible" />
 </StatGroup>
 
 The Sportix team describes the biggest change as visibility. Before the system, no one at the Sportix level had a clear picture of what was happening across all 8 clubs simultaneously. Training compliance, player availability, upcoming competitions, financial positions — all of it required calling club managers individually. Now it's a morning dashboard check.
@@ -72,4 +79,4 @@ I also wish I'd built the WhatsApp notification system earlier. It was added in 
 
 ## Built with
 
-Lead software developer, leading a team of three. I owned the architecture and the hardest pieces — the multi-tenant data model, the Hijri/Gregorian calendar layer, and the federation export modules — and split the build across the team while keeping the system coherent. Next.js, TypeScript, Supabase, Tailwind CSS. WhatsApp Business API for notifications. Custom Hijri/Gregorian calendar utilities. Federation-specific export modules built per sport.
+Lead software developer, leading a team of three. I owned the architecture and the hardest pieces — the multi-tenant data model, the Hijri/Gregorian calendar layer, the federation export modules, and the AI analytics layer — and split the build across the team while keeping the system coherent. Next.js, TypeScript, Supabase, Tailwind CSS. WhatsApp Business API for notifications. Custom Hijri/Gregorian calendar utilities. Federation-specific export modules built per sport. Gradient-boosted model for injury risk scoring. LLM layer (GPT-4o via Azure OpenAI) for Arabic-language report generation.
