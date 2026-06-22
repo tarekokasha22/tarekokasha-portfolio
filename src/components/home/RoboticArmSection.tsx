@@ -10,6 +10,7 @@
  * No other changes needed — page.tsx already imports this component.
  */
 
+import type * as THREE from "three";
 import { useEffect, useRef } from "react";
 
 // ── constants ──────────────────────────────────────────────────────────────
@@ -316,7 +317,7 @@ export function RoboticArmSection() {
       tubeGlow.geometry.setDrawRange(0, Math.floor(glowIdx * clamp(trace, 0, 1)));
 
       // corner stars
-      corners.forEach((c, i) => {
+      corners.forEach((c: { m: THREE.Mesh; gl: THREE.Sprite }, i: number) => {
         const on = trace >= VFRAC[i] - 0.002 && p >= 0.18;
         c.m.material.opacity = lerp(c.m.material.opacity as number, on ? 1 : 0.2, 0.2);
         (c.m.material as THREE.MeshBasicMaterial).color.set(on ? 0xE7C878 : 0xF4EFE6);
