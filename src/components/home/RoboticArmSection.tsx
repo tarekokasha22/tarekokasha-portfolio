@@ -319,9 +319,9 @@ export function RoboticArmSection() {
       // corner stars
       corners.forEach((c: { m: THREE.Mesh; gl: THREE.Sprite }, i: number) => {
         const on = trace >= VFRAC[i] - 0.002 && p >= 0.18;
-        c.m.material.opacity = lerp(c.m.material.opacity as number, on ? 1 : 0.2, 0.2);
+        (c.m.material as THREE.MeshBasicMaterial).opacity = lerp((c.m.material as THREE.MeshBasicMaterial).opacity, on ? 1 : 0.2, 0.2);
         (c.m.material as THREE.MeshBasicMaterial).color.set(on ? 0xE7C878 : 0xF4EFE6);
-        c.gl.material.opacity = lerp(c.gl.material.opacity as number, on ? 0.9 : 0, 0.2);
+        (c.gl.material as THREE.SpriteMaterial).opacity = lerp((c.gl.material as THREE.SpriteMaterial).opacity, on ? 0.9 : 0, 0.2);
         c.m.scale.setScalar(lerp(c.m.scale.x, on ? 1.5 : 1.0, 0.2));
       });
 
