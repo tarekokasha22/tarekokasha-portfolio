@@ -102,7 +102,7 @@ export function RobotWatcher() {
       setMessage(null);
       clearTimeout(sleepTimer.current);
       sleepTimer.current = setTimeout(() => setIsAwake(false), 4000);
-    }, 3600);
+    }, 4600);
   };
 
   // ── Contextual messages: any element with [data-robot="..."] speaks ──

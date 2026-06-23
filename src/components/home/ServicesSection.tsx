@@ -6,24 +6,24 @@ import { motion, useInView } from "motion/react";
 const services = [
   {
     number: "01",
-    title: "AI systems & automations",
+    title: "Robotics & computer vision",
     description:
-      "Working LLM integrations, agents, retrieval pipelines, and evaluations — built like real software, with tests and observability. Plus the boring, high-impact automation work: manual spreadsheets, data plumbing, and ops handoffs replaced with code that runs quietly. Not demos. Things that run in production without you watching them.",
-    tags: ["Claude", "OpenAI", "n8n", "LangChain", "Zapier"],
+      "Voice-controlled pick-and-place on a UR5e arm: ROS 2 and MoveIt 2 for motion planning, a depth camera with real-time vision to locate and grasp objects, and a full Alexa → AWS Lambda → ROS 2 pipeline for spoken commands. Modular nodes, simulation-to-hardware ready. This is the systems engineering underneath everything else I build.",
+    tags: ["ROS 2", "MoveIt 2", "Computer Vision", "UR5e", "AWS Lambda", "Alexa"],
   },
   {
     number: "02",
-    title: "Custom internal software",
+    title: "Custom Software Development",
     description:
       "The tools your team needs but no SaaS vendor sells: ops dashboards, lead pipelines, custom CRMs, workflow engines. Built for the exact shape of your business. Yours to own, not subscribe to forever.",
     tags: ["Next.js", "TypeScript", "PostgreSQL", "Supabase"],
   },
   {
     number: "03",
-    title: "Robotics & computer vision",
+    title: "AI systems & automations",
     description:
-      "Voice-controlled pick-and-place on a UR5e arm: ROS 2 and MoveIt 2 for motion planning, a depth camera with real-time vision to locate and grasp objects, and a full Alexa → AWS Lambda → ROS 2 pipeline for spoken commands. Modular nodes, simulation-to-hardware ready. This is the systems engineering underneath everything else I build.",
-    tags: ["ROS 2", "MoveIt 2", "Computer Vision", "UR5e", "AWS Lambda", "Alexa"],
+      "Working LLM integrations, agents, retrieval pipelines, and evaluations — built like real software, with tests and observability. Plus the boring, high-impact automation work: manual spreadsheets, data plumbing, and ops handoffs replaced with code that runs quietly. Not demos. Things that run in production without you watching them.",
+    tags: ["Claude", "OpenAI", "n8n", "LangChain", "Zapier"],
   },
 ];
 
